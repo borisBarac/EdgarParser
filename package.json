@@ -8,6 +8,9 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:unit": "bun test src",
+    "test:e2e": "bun test e2e",
     "db:migrate": "bunx --bun prisma migrate dev",
     "db:generate": "bunx --bun prisma generate",
     "db:studio": "bunx --bun prisma studio"
@@ -21,14 +24,17 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@langchain/openai": "^1.5.10",
     "@libsql/client": "^0.17.4",
     "@prisma/adapter-libsql": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "cheerio": "^1.2.0",
     "fontoxpath": "^3.34.0",
     "happy-dom": "^20.11.6",
+    "langchain": "^1.5.10",
     "neverthrow": "^8.2.0",
     "prisma": "7.10.0",
-    "tiktoken": "^1.0.22"
+    "tiktoken": "^1.0.22",
+    "zod": "^4.4.3"
   }
 }
