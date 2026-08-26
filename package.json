@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "cheerio": "^1.2.0",
+    "fontoxpath": "^3.34.0",
+    "happy-dom": "^20.11.6",
     "neverthrow": "^8.2.0"
   }
 }

@@ -1,13 +1,6 @@
 import { basename, dirname, extname, join } from "node:path";
 import { type CheerioAPI, load } from "cheerio";
-import {
-  err,
-  errAsync,
-  ok,
-  okAsync,
-  type Result,
-  type ResultAsync,
-} from "neverthrow";
+import { err, errAsync, ok, type Result, type ResultAsync } from "neverthrow";
 import {
   type FileManagerError,
   readFile,
@@ -194,3 +187,6 @@ export const cleanHtmlFile = (
     ),
   );
 };
+
+export type { HtmlXPathError } from "./xpath";
+export { getHtmlElementAtXPath, getTagXPaths } from "./xpath";

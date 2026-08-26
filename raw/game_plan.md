@@ -15,7 +15,7 @@ Based on chunk ids and XPaths
 ## Scoring
 ✅ bm25 search
 ✅ jaccard implementation
-- scoring: bm25 search to validate, and jaccard similarity score. <br>
+✅ scoring: bm25 search to validate, and jaccard similarity score. <br>
 
 
 I wanted to do Vector Similarity, but no access to embeddings model, so i went with the similarity score
