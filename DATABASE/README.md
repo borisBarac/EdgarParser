@@ -1,4 +1,5 @@
 ## Database instructions
 
-- SQL lite file goes here
-prismafiles for db go to './prisma' subfolder
+- SQLite file: `DATABASE/edgar.db`
+- Prisma files go to `./prisma` subfolder
+- Prisma is pinned to v7 for the classic `migrate dev` / `generate` workflow.

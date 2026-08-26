@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model File {
+  id            Int           @id @default(autoincrement())
+  orgFilePath   String        @unique @map("org_file_path")
+  cleanFilePath String        @map("clean_file_path")
+  chunks        Chunk[]
+  tables        FilingTable[]
+
+  @@map("files")
+}
+
+model Chunk {
+  id           Int           @id @default(autoincrement())
+  fileId       Int           @map("file_id")
+  xpathStart   String        @map("xpath_start")
+  xpathEnd     String        @map("xpath_end")
+  orderInFile  Int           @map("order_in_file")
+  text         String
+  file         File          @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  prevOfTables FilingTable[] @relation("PrevChunk")
+  nextOfTables FilingTable[] @relation("NextChunk")
+
+  @@unique([fileId, orderInFile])
+  @@unique([id, fileId])
+  @@map("chunks")
+}
+
+model FilingTable {
+  id              Int    @id @default(autoincrement())
+  fileId          Int    @map("file_id")
+  xpath           String
+  orderInFile     Int    @map("order_in_file")
+  text            String
+  prevChunkId     Int?   @map("prev_chunk_id")
+  prevChunkFileId Int?   @map("prev_chunk_file_id")
+  nextChunkId     Int?   @map("next_chunk_id")
+  nextChunkFileId Int?   @map("next_chunk_file_id")
+
+  file      File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  prevChunk Chunk? @relation("PrevChunk", fields: [prevChunkId, prevChunkFileId], references: [id, fileId], onDelete: SetNull)
+  nextChunk Chunk? @relation("NextChunk", fields: [nextChunkId, nextChunkFileId], references: [id, fileId], onDelete: SetNull)
+
+  @@unique([fileId, orderInFile])
+  @@index([prevChunkId, prevChunkFileId])
+  @@index([nextChunkId, nextChunkFileId])
+  @@map("filing_tables")
+}
