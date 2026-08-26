@@ -3,7 +3,7 @@
 
 ✅ cleanUp (img, style, scripts)
 ✅ save new files to disk
-- db prep
+✅ db prep
 - make chunks based on tables, end of table is end of one chunk, make sure the chunk has a number (index in original file) as well as start and end XPATH
 - extract tables, have references to chunk before and chunk after
 - llm extraction from chunks (with token used and cost)
