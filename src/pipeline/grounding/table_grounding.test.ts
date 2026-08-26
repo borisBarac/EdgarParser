@@ -39,7 +39,7 @@ describe("groundTableExtractionItem", () => {
       },
     ]);
     expect(grounding.score.bm25).toBeGreaterThan(0.3);
-    expect(grounding.score.jaroWinkler).toBeGreaterThan(0.3);
+    expect(grounding.score.jaccardSimilarity).toBeGreaterThan(0.3);
   });
 
   test("rejects blank query text", () => {
@@ -107,7 +107,7 @@ describe("groundTableExtractionItem", () => {
 
     const grounding = result._unsafeUnwrap();
     expect(grounding.score.bm25).toBeGreaterThan(0.3);
-    expect(grounding.score.jaroWinkler).toBeGreaterThan(0.3);
+    expect(grounding.score.jaccardSimilarity).toBeGreaterThan(0.3);
   });
 
   test("ignores html tags in the source table text", () => {
@@ -171,6 +171,6 @@ describe("groundTableExtractionItem", () => {
       },
     ]);
     expect(grounding.score.bm25).toBeGreaterThan(0.3);
-    expect(grounding.score.jaroWinkler).toBeGreaterThan(0.3);
+    expect(grounding.score.jaccardSimilarity).toBeGreaterThan(0.3);
   });
 });

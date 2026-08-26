@@ -37,7 +37,7 @@ describe("groundQuoteExtractionItem", () => {
     expect(grounding.documentId).toBe("doc-1");
     expect(grounding.chunks.map((chunk) => chunk.id)).toEqual(["c1", "c2"]);
     expect(grounding.score.bm25).toBeGreaterThan(1);
-    expect(grounding.score.jaroWinkler).toBeGreaterThan(0);
+    expect(grounding.score.jaccardSimilarity).toBeGreaterThan(0);
   });
 
   test("ignores html tags in chunk text", () => {
@@ -65,7 +65,7 @@ describe("groundQuoteExtractionItem", () => {
     );
 
     expect(grounding.score.bm25).toBeGreaterThan(1);
-    expect(grounding.score.jaroWinkler).toBeGreaterThan(0);
+    expect(grounding.score.jaccardSimilarity).toBeGreaterThan(0);
   });
 
   test("falls back to statement when quote is null", () => {
@@ -199,6 +199,6 @@ describe("groundQuoteExtractionItem", () => {
       "chunk-2",
     ]);
     expect(grounding.score.bm25).toBeGreaterThan(0.3);
-    expect(grounding.score.jaroWinkler).toBeGreaterThan(0.3);
+    expect(grounding.score.jaccardSimilarity).toBeGreaterThan(0.3);
   });
 });

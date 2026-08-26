@@ -86,7 +86,7 @@ const scoreCorpus = (query: string, corpus: string): GroundingScore => {
 
   return {
     bm25: bm25ToSearchScore(bm25),
-    jaroWinkler: jaccardSimilarity(query, corpus),
+    jaccardSimilarity: jaccardSimilarity(query, corpus),
   };
 };
 

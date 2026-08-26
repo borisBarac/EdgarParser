@@ -6,7 +6,7 @@
 
 # Scoring
 
-Score is gonna be a combination of the JaroWinklerDistance and bm25
+Score is gonna be a combination of the Jaccard similarity and bm25
 
 ## String similarity
 Text similarity

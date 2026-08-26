@@ -12,7 +12,7 @@ export const GroundingSchema = z
     ),
     score: z.object({
       bm25: z.number(),
-      jaroWinkler: z.number(),
+      jaccardSimilarity: z.number(),
     }),
   })
   .optional();
