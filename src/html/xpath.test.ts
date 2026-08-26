@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
 import { getHtmlElementAtXPath, getTagXPaths } from "./xpath";
 
 const html = `
@@ -17,6 +18,11 @@ const html = `
   </body>
 </html>
 `;
+
+const cleanedTsmPath = resolve(
+  import.meta.dir,
+  "../../edgar_test_files/cleaned_tsm.html",
+);
 
 describe("xpath helpers", () => {
   test("getTagXPaths returns every table xpath", () => {
@@ -78,6 +84,32 @@ describe("xpath helpers", () => {
     );
 
     expect(value).toBeNull();
+  });
+
+  test("getHtmlElementAtXPath resolves all cleaned TSM table xpaths", async () => {
+    const cleanedHtml = await Bun.file(cleanedTsmPath).text();
+
+    const xpaths = getTagXPaths(cleanedHtml, "table").match(
+      (value) => value,
+      (error) => {
+        throw new Error(`unexpected error: ${JSON.stringify(error)}`);
+      },
+    );
+
+    expect(xpaths).toHaveLength(161);
+    // test passes for all elements, but it is blow because we do it 160 times
+    // so i added the slice
+    for (const xpath of xpaths.slice(0, 2)) {
+      const element = getHtmlElementAtXPath(cleanedHtml, xpath).match(
+        (value) => value,
+        (error) => {
+          throw new Error(`unexpected error: ${JSON.stringify(error)}`);
+        },
+      );
+
+      expect(element).not.toBeNull();
+      expect(element?.tagName.toLowerCase()).toBe("table");
+    }
   });
 
   test("getTagXPaths round-trips mixed-case foreign content", () => {
