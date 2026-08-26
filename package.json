@@ -1,0 +1,19 @@
+{
+  "name": "edgarparse",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.10",
+    "@types/bun": "latest",
+    "husky": "9.1.7"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
