@@ -21,6 +21,13 @@ export type StructuredAgentInput<TSchema extends ZodTypeAny> = Readonly<{
   prompt: string;
   schema: TSchema;
   model?: AgentModelSelector;
+  tools?: AgentToolContents;
+}>;
+
+export type AgentToolContents = Readonly<{
+  companyContextData: string;
+  extractionData: string;
+  adjesonData: string;
 }>;
 
 export type AgentEnv = Readonly<{

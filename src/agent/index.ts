@@ -11,12 +11,15 @@ import {
 import type { ZodTypeAny, z } from "zod";
 
 import { calculateCost, createCostMiddleware, resolveModelName } from "./cost";
+import { createAgentTools } from "./tools";
 import type {
   AgentEnv,
   StructuredAgentError,
   StructuredAgentInput,
   StructuredAgentSuccess,
 } from "./types";
+
+type AgentTool = ReturnType<typeof createAgentTools>[number];
 
 const requiredEnvKeys = [
   "PIPELINE_KEY",
@@ -172,6 +175,7 @@ const buildAgent = (
   model: "mini" | "main",
   schema: ZodTypeAny,
   systemPrompt: string,
+  tools: AgentTool[],
 ) =>
   createAgent({
     model: new ChatOpenAI({
@@ -181,7 +185,7 @@ const buildAgent = (
         baseURL: env.llmUrl,
       },
     }),
-    tools: [],
+    tools,
     responseFormat: providerStrategy(schema),
     systemPrompt,
     middleware: [createCostMiddleware()],
@@ -199,11 +203,13 @@ export const runStructuredAgent = <TSchema extends ZodTypeAny>(
   }
 
   const env = envResult.value;
+  const tools = input.tools === undefined ? [] : createAgentTools(input.tools);
   const agent = buildAgent(
     env,
     input.model ?? "mini",
     input.schema,
     input.systemPrompt,
+    tools,
   );
 
   return ResultAsync.fromPromise(
@@ -256,10 +262,12 @@ export const createStructuredAgentStep = <TSchema extends ZodTypeAny>(
 ) => runStructuredAgent(input);
 
 export { calculateCost, createCostMiddleware, resolveModelName } from "./cost";
+export { createAgentTools } from "./tools";
 export type {
   AgentCost,
   AgentEnv,
   AgentModelSelector,
+  AgentToolContents,
   StructuredAgentError,
   StructuredAgentInput,
   StructuredAgentSuccess,
