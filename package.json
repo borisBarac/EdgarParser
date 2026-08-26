@@ -28,6 +28,7 @@
     "fontoxpath": "^3.34.0",
     "happy-dom": "^20.11.6",
     "neverthrow": "^8.2.0",
-    "prisma": "7.10.0"
+    "prisma": "7.10.0",
+    "tiktoken": "^1.0.22"
   }
 }
