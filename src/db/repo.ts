@@ -192,7 +192,7 @@ const validateOrder = (
   return ok(value);
 };
 
-const validateTextField = (
+const validateTrimmedField = (
   field: string,
   value: string,
 ): Result<string, RepoError> => {
@@ -203,6 +203,17 @@ const validateTextField = (
   }
 
   return ok(trimmed);
+};
+
+const validatePreservedField = (
+  field: string,
+  value: string,
+): Result<string, RepoError> => {
+  if (value.trim().length === 0) {
+    return err(toInvalidInputError(field, "must be a non-empty string."));
+  }
+
+  return ok(value);
 };
 
 const validateNullableOrder = (
@@ -236,7 +247,7 @@ const validateUniqueOrders = <T extends { readonly orderInFile: number }>(
 const validateSaveFileGraphInput = (
   input: SaveFileGraphInput,
 ): Result<NormalizedSaveFileGraphInput, RepoError> => {
-  const normalizedOrgFilePath = validateTextField(
+  const normalizedOrgFilePath = validatePreservedField(
     "orgFilePath",
     input.orgFilePath,
   );
@@ -245,7 +256,7 @@ const validateSaveFileGraphInput = (
     return err(normalizedOrgFilePath.error);
   }
 
-  const normalizedCleanFilePath = validateTextField(
+  const normalizedCleanFilePath = validatePreservedField(
     "cleanFilePath",
     input.cleanFilePath,
   );
@@ -266,7 +277,7 @@ const validateSaveFileGraphInput = (
       return err(orderInFile.error);
     }
 
-    const xpathStart = validateTextField(
+    const xpathStart = validateTrimmedField(
       `chunks[${index}].xpathStart`,
       chunk.xpathStart,
     );
@@ -275,7 +286,7 @@ const validateSaveFileGraphInput = (
       return err(xpathStart.error);
     }
 
-    const xpathEnd = validateTextField(
+    const xpathEnd = validateTrimmedField(
       `chunks[${index}].xpathEnd`,
       chunk.xpathEnd,
     );
@@ -284,7 +295,7 @@ const validateSaveFileGraphInput = (
       return err(xpathEnd.error);
     }
 
-    const text = validateTextField(`chunks[${index}].text`, chunk.text);
+    const text = validatePreservedField(`chunks[${index}].text`, chunk.text);
 
     if (text.isErr()) {
       return err(text.error);
@@ -323,13 +334,13 @@ const validateSaveFileGraphInput = (
       return err(orderInFile.error);
     }
 
-    const xpath = validateTextField(`tables[${index}].xpath`, table.xpath);
+    const xpath = validateTrimmedField(`tables[${index}].xpath`, table.xpath);
 
     if (xpath.isErr()) {
       return err(xpath.error);
     }
 
-    const text = validateTextField(`tables[${index}].text`, table.text);
+    const text = validatePreservedField(`tables[${index}].text`, table.text);
 
     if (text.isErr()) {
       return err(text.error);

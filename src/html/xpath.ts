@@ -8,7 +8,9 @@ export type HtmlXPathError = Readonly<{
   readonly cause: unknown;
 }>;
 
-const parseHtml = (html: string): Result<Document, HtmlXPathError> => {
+export const parseHtmlDocument = (
+  html: string,
+): Result<Document, HtmlXPathError> => {
   try {
     const window = new Window();
 
@@ -54,7 +56,7 @@ export const getHtmlElementAtXPath = (
   html: string,
   xpath: string,
 ): Result<Element | null, HtmlXPathError> =>
-  parseHtml(html).andThen((document) => {
+  parseHtmlDocument(html).andThen((document) => {
     try {
       const node = evaluateXPathToFirstNode<Node>(xpath, document);
 
@@ -78,7 +80,7 @@ export const getTagXPaths = (
   html: string,
   tagName: string,
 ): Result<readonly string[], HtmlXPathError> =>
-  parseHtml(html).map((document) => {
+  parseHtmlDocument(html).map((document) => {
     const normalizedTagName = tagName.toLowerCase();
     const elements = Array.from(
       document.getElementsByTagName(normalizedTagName),
@@ -86,3 +88,5 @@ export const getTagXPaths = (
 
     return elements.map((element) => elementToXPath(element));
   });
+
+export { elementToXPath };

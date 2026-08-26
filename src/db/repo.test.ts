@@ -140,6 +140,58 @@ describe("db repo", () => {
     expect(fetched?.tables.map((table) => table.orderInFile)).toEqual([0]);
   });
 
+  test("preserves exact path and html strings", async () => {
+    const input = makeInput({
+      orgFilePath: `  /tmp/${crypto.randomUUID()}.html  `,
+      cleanFilePath: `  /tmp/${crypto.randomUUID()}_clean.html  `,
+      chunks: [
+        {
+          xpathStart: "/html/body/div[1]",
+          xpathEnd: "/html/body/div[1]",
+          orderInFile: 0,
+          text: "  <div><span>chunk html</span></div>  ",
+        },
+      ],
+      tables: [
+        {
+          xpath: "/html/body/table[1]",
+          orderInFile: 0,
+          text: "  <table><tbody><tr><td>table html</td></tr></tbody></table>  ",
+          prevChunkOrderInFile: null,
+          nextChunkOrderInFile: null,
+        },
+      ],
+    });
+
+    const saved = await getRepo()
+      .saveFileGraph(input)
+      .match(
+        (value) => value,
+        (error) => {
+          throw new Error(`unexpected error: ${JSON.stringify(error)}`);
+        },
+      );
+
+    expect(saved.file.orgFilePath).toBe(input.orgFilePath);
+    expect(saved.file.cleanFilePath).toBe(input.cleanFilePath);
+    expect(saved.chunks[0]?.text).toBe(input.chunks[0]?.text);
+    expect(saved.tables[0]?.text).toBe(input.tables[0]?.text);
+
+    const fetched = await getRepo()
+      .getFileGraphByOrgPath(input.orgFilePath)
+      .match(
+        (value) => value,
+        (error) => {
+          throw new Error(`unexpected error: ${JSON.stringify(error)}`);
+        },
+      );
+
+    expect(fetched?.file.orgFilePath).toBe(input.orgFilePath);
+    expect(fetched?.file.cleanFilePath).toBe(input.cleanFilePath);
+    expect(fetched?.chunks[0]?.text).toBe(input.chunks[0]?.text);
+    expect(fetched?.tables[0]?.text).toBe(input.tables[0]?.text);
+  });
+
   test("replace semantics delete and recreate with a new file id", async () => {
     const orgFilePath = `/tmp/${crypto.randomUUID()}.html`;
 
