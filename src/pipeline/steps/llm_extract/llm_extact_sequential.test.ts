@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { FileGraph } from "../../db/repo";
+import type { FileGraph } from "../../../db/repo";
 import { runSequentialExtraction } from "./llm_extact";
 
 describe("runSequentialExtraction", () => {

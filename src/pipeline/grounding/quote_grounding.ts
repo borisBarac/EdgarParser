@@ -18,7 +18,6 @@ export type GroundingChunkInput = Readonly<{
 
 export type GroundQuoteInput = Readonly<{
   documentId: string;
-  xpath: string;
   statement: string;
   quote: string | null;
   chunks: readonly GroundingChunkInput[];

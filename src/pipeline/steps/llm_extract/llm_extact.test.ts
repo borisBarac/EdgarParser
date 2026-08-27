@@ -4,13 +4,20 @@ import { okAsync } from "neverthrow";
 describe("llmExtract", () => {
   test("runs quote and table extraction sequentially per chunk and returns a pipeline model", async () => {
     const quoteCalls: string[] = [];
+    const quoteGroundingDocs: Array<string | undefined> = [];
+    const quoteGroundingChunkCounts: number[] = [];
     const tableCalls: string[] = [];
+    const tableSourceXpaths: Array<string | undefined> = [];
 
     mock.module("../llm_extraction/quotes", () => ({
       runQuoteExtractionAgent: (input: {
         readonly tools: { readonly extractionData: string };
+        readonly documentId?: string;
+        readonly chunks?: readonly { readonly id: string }[];
       }) => {
         quoteCalls.push(input.tools.extractionData);
+        quoteGroundingDocs.push(input.documentId);
+        quoteGroundingChunkCounts.push(input.chunks?.length ?? 0);
 
         return okAsync(
           input.tools.extractionData === "chunk-0"
@@ -53,8 +60,14 @@ describe("llmExtract", () => {
     mock.module("../llm_extraction/tables", () => ({
       runTableExtractionAgent: (input: {
         readonly tools: { readonly extractionData: string };
+        readonly source?: {
+          readonly documentId: string;
+          readonly xpath: string;
+          readonly html: string;
+        };
       }) => {
         tableCalls.push(input.tools.extractionData);
+        tableSourceXpaths.push(input.source?.xpath);
 
         return okAsync([
           {
@@ -103,7 +116,34 @@ describe("llmExtract", () => {
           text: "chunk-1",
         },
       ],
-      tables: [],
+      tables: [
+        {
+          id: 20,
+          fileId: 1,
+          orderInFile: 0,
+          xpath: "/table[0]",
+          text: "table-0",
+          prevChunkId: null,
+          prevChunkFileId: null,
+          nextChunkId: null,
+          nextChunkFileId: null,
+          prevChunk: null,
+          nextChunk: null,
+        },
+        {
+          id: 21,
+          fileId: 1,
+          orderInFile: 1,
+          xpath: "/table[1]",
+          text: "table-1",
+          prevChunkId: null,
+          prevChunkFileId: null,
+          nextChunkId: null,
+          nextChunkFileId: null,
+          prevChunk: null,
+          nextChunk: null,
+        },
+      ],
     }).match(
       (value) => value,
       (error) => {
@@ -112,12 +152,15 @@ describe("llmExtract", () => {
     );
 
     expect(quoteCalls).toEqual(["chunk-0", "chunk-1"]);
-    expect(tableCalls).toEqual(["chunk-0", "chunk-1"]);
+    expect(quoteGroundingDocs).toEqual(["1", "1"]);
+    expect(quoteGroundingChunkCounts).toEqual([2, 2]);
+    expect(tableCalls).toEqual(["table-0", "table-1"]);
+    expect(tableSourceXpaths).toEqual(["/table[0]", "/table[1]"]);
     expect(result.quotes).toHaveLength(2);
     expect(result.tables).toHaveLength(2);
     expect(result.quotes[0]?.statement).toBe("quote-0");
     expect(result.quotes[1]?.statement).toBe("quote-1");
-    expect(result.tables[0]?.title).toBe("chunk-0");
-    expect(result.tables[1]?.title).toBe("chunk-1");
+    expect(result.tables[0]?.title).toBe("table-0");
+    expect(result.tables[1]?.title).toBe("table-1");
   });
 });

@@ -1,7 +1,12 @@
+import { okAsync } from "neverthrow";
 import { z } from "zod";
 
 import { runStructuredAgent } from "../../agent";
 import type { AgentToolContents } from "../../agent/types";
+import {
+  type GroundTableSourceInput,
+  groundTableExtractionItem,
+} from "../grounding/table_grounding";
 import { TableExtractionSchema, TableExtractionWithCostSchema } from "../model";
 
 export const TableExtractionItemsSchema = z.array(TableExtractionSchema);
@@ -19,6 +24,7 @@ export type TableExtractionItemsWithCost = z.infer<
 
 export type TableExtractionAgentInput = Readonly<{
   tools: AgentToolContents;
+  source?: GroundTableSourceInput;
 }>;
 
 export const tableExtractionSystemPrompt = `You extract financial tables from EDGAR filings.
@@ -57,12 +63,37 @@ export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
     schema: TableExtractionItemsSchema,
     model: "mini",
     tools: input.tools,
-  }).map(
-    ({ output, cost }): TableExtractionItemsWithCost =>
-      TableExtractionItemsSchemaWithCost.parse(
-        output.map((item) => ({
-          ...item,
-          cost,
-        })),
-      ),
-  );
+  }).andThen(({ output, cost }) => {
+    const groundedItems = output.map((item) => {
+      const grounding =
+        input.source === undefined
+          ? undefined
+          : groundTableExtractionItem(
+              {
+                title: item.title,
+                currency: item.currency,
+                scale: item.scale,
+                rows: item.rows,
+              },
+              input.source,
+            ).match(
+              (value) => value,
+              (error) => {
+                console.log("table grounding failed", {
+                  title: item.title,
+                  error,
+                });
+
+                return undefined;
+              },
+            );
+
+      return {
+        ...item,
+        grounding,
+        cost,
+      };
+    });
+
+    return okAsync(TableExtractionItemsSchemaWithCost.parse(groundedItems));
+  });

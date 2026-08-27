@@ -1,6 +1,11 @@
+import { okAsync } from "neverthrow";
 import { z } from "zod";
 import { runStructuredAgent } from "../../agent";
 import type { AgentToolContents } from "../../agent/types";
+import {
+  type GroundingChunkInput,
+  groundQuoteExtractionItem,
+} from "../grounding/quote_grounding";
 import {
   QuoteExtractionItemSchema,
   QuoteExtractionItemWithCostSchema,
@@ -22,6 +27,8 @@ export type QuoteExtractionItemsWithCost = z.infer<
 
 export type QuoteExtractionAgentInput = Readonly<{
   tools: AgentToolContents;
+  documentId?: string;
+  chunks?: readonly GroundingChunkInput[];
 }>;
 
 export const quoteExtractionSystemPrompt = `You extract data and management quotes from EDGAR narrative prose.
@@ -59,12 +66,34 @@ export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
     schema: QuoteExtractionItemsSchema,
     model: "mini",
     tools: input.tools,
-  }).map(
-    ({ output, cost }): QuoteExtractionItemsWithCost =>
-      QuoteExtractionItemsSchemaWithCost.parse(
-        output.map((item) => ({
-          ...item,
-          cost,
-        })),
-      ),
-  );
+  }).andThen(({ output, cost }) => {
+    const groundedItems = output.map((item) => {
+      const grounding =
+        input.documentId === undefined || input.chunks === undefined
+          ? undefined
+          : groundQuoteExtractionItem({
+              documentId: input.documentId,
+              statement: item.statement,
+              quote: item.quote,
+              chunks: input.chunks,
+            }).match(
+              (value) => value,
+              (error) => {
+                console.log("quote grounding failed", {
+                  statement: item.statement,
+                  error,
+                });
+
+                return undefined;
+              },
+            );
+
+      return {
+        ...item,
+        grounding,
+        cost,
+      };
+    });
+
+    return okAsync(QuoteExtractionItemsSchemaWithCost.parse(groundedItems));
+  });

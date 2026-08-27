@@ -6,7 +6,6 @@ describe("groundQuoteExtractionItem", () => {
   test("grounds using both quote and statement across all chunks", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-1",
-      xpath: "/html/body/p[1]",
       statement: "Revenue increased due to demand",
       quote: "demand",
       chunks: [
@@ -43,7 +42,6 @@ describe("groundQuoteExtractionItem", () => {
   test("ignores html tags in chunk text", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-1",
-      xpath: "/html/body/p[1]",
       statement: "Revenue increased",
       quote: "Revenue",
       chunks: [
@@ -71,7 +69,6 @@ describe("groundQuoteExtractionItem", () => {
   test("falls back to statement when quote is null", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-2",
-      xpath: "/html/body/p[1]",
       statement: "Operating income expanded",
       quote: null,
       chunks: [
@@ -105,7 +102,6 @@ describe("groundQuoteExtractionItem", () => {
   test("rejects blank query text", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-3",
-      xpath: "/html/body/p[1]",
       statement: "   ",
       quote: "  ",
       chunks: [
@@ -126,7 +122,6 @@ describe("groundQuoteExtractionItem", () => {
   test("rejects empty chunks", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-4",
-      xpath: "/html/body/p[1]",
       statement: "anything",
       quote: null,
       chunks: [],
@@ -139,7 +134,6 @@ describe("groundQuoteExtractionItem", () => {
   test("rejects invalid chunk ids", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-5",
-      xpath: "/html/body/p[1]",
       statement: "anything",
       quote: null,
       chunks: [
@@ -163,7 +157,6 @@ describe("groundQuoteExtractionItem", () => {
   test("grounds the messy quote fixture", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-messy-quote",
-      xpath: "/html/body/div[1]",
       statement:
         "Provides guidance to enhance the requirements of aggregation and disaggregation",
       quote:
