@@ -58,7 +58,7 @@ const invokeFailedError = (cause: unknown): StructuredAgentError => ({
 
 const missingUsageMetadataError = (): StructuredAgentError => ({
   type: "missing_usage_metadata",
-  message: "The agent response did not include usage metadata.",
+  message: "The agent run did not include accumulated cost state.",
 });
 
 const missingStructuredResponseError = (): StructuredAgentError => ({
@@ -128,26 +128,26 @@ const readRequiredEnv = (): Result<AgentEnv, StructuredAgentError> => {
   });
 };
 
-const readUsageTokens = (
-  usage: unknown,
+const readCostTokens = (
+  cost: unknown,
 ): Result<
   Readonly<{ inputTokens: number; outputTokens: number; totalTokens: number }>,
   StructuredAgentError
 > => {
   if (
-    typeof usage !== "object" ||
-    usage === null ||
-    !("input_tokens" in usage) ||
-    !("output_tokens" in usage) ||
-    !("total_tokens" in usage)
+    typeof cost !== "object" ||
+    cost === null ||
+    !("inputTokens" in cost) ||
+    !("outputTokens" in cost) ||
+    !("totalTokens" in cost)
   ) {
     return err(missingUsageMetadataError());
   }
 
-  const value = usage as Record<string, unknown>;
-  const inputTokens = Number(value.input_tokens);
-  const outputTokens = Number(value.output_tokens);
-  const totalTokens = Number(value.total_tokens);
+  const value = cost as Record<string, unknown>;
+  const inputTokens = Number(value.inputTokens);
+  const outputTokens = Number(value.outputTokens);
+  const totalTokens = Number(value.totalTokens);
 
   if (![inputTokens, outputTokens, totalTokens].every(Number.isFinite)) {
     return err(missingUsageMetadataError());
@@ -231,10 +231,7 @@ export const runStructuredAgent = <TSchema extends ZodTypeAny>(
       return errAsync(structuredResponse.error);
     }
 
-    const finalMessage = result.messages.at(-1) as
-      | { usage_metadata?: unknown }
-      | undefined;
-    const usage = readUsageTokens(finalMessage?.usage_metadata);
+    const usage = readCostTokens(result);
     if (usage.isErr()) {
       return errAsync(usage.error);
     }
