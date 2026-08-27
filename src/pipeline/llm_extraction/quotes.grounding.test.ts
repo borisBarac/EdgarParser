@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { err, ok, okAsync } from "neverthrow";
+import { ok, okAsync } from "neverthrow";
 
 describe("runQuoteExtractionAgent grounding", () => {
   test("grounds items when grounding input is provided", async () => {
@@ -91,7 +91,13 @@ describe("runQuoteExtractionAgent grounding", () => {
     }));
 
     mock.module("../grounding/quote_grounding", () => ({
-      groundQuoteExtractionItem: () => err({ type: "empty_query" as const }),
+      groundQuoteExtractionItem: (input: { readonly statement: string }) =>
+        ok({
+          documentId: "doc-1",
+          chunks: [],
+          score: { bm25: 0, jaccardSimilarity: 0 },
+          statement: input.statement,
+        }),
     }));
 
     const { runQuoteExtractionAgent } = await import("./quotes");

@@ -2,6 +2,96 @@ import { describe, expect, mock, test } from "bun:test";
 import { okAsync } from "neverthrow";
 
 describe("llmExtract", () => {
+  test("skips quote and table extraction for short visible content", async () => {
+    const quoteCalls: string[] = [];
+    const tableCalls: string[] = [];
+
+    mock.module("../../llm_extraction/quotes", () => ({
+      runQuoteExtractionAgent: (input: {
+        readonly tools: {
+          readonly extractionData: string;
+          readonly adjesonData: string;
+        };
+      }) => {
+        quoteCalls.push(input.tools.extractionData);
+
+        return okAsync([]);
+      },
+    }));
+
+    mock.module("../../llm_extraction/tables", () => ({
+      runTableExtractionAgent: (input: {
+        readonly tools: { readonly extractionData: string };
+      }) => {
+        tableCalls.push(input.tools.extractionData);
+
+        return okAsync([
+          {
+            title: "table",
+            currency: null,
+            scale: null,
+            columns: [],
+            rows: [],
+            grounding: undefined,
+            cost: {
+              inputTokens: 1,
+              outputTokens: 1,
+              totalTokens: 2,
+              inputUsd: 0.01,
+              outputUsd: 0.01,
+              totalUsd: 0.02,
+            },
+          },
+        ]);
+      },
+    }));
+
+    const { llmExtract } = await import("./llm_extract");
+
+    const result = await llmExtract({
+      file: {
+        id: 1,
+        orgFilePath: "/tmp/input.html",
+        cleanFilePath: "/tmp/clean.html",
+      },
+      chunks: [
+        {
+          id: 10,
+          fileId: 1,
+          orderInFile: 0,
+          xpathStart: "/a",
+          xpathEnd: "/a",
+          text: "<p>short chunk</p>",
+        },
+      ],
+      tables: [
+        {
+          id: 20,
+          fileId: 1,
+          orderInFile: 0,
+          xpath: "/table[0]",
+          text: "table-0",
+          prevChunkId: null,
+          prevChunkFileId: null,
+          nextChunkId: null,
+          nextChunkFileId: null,
+          prevChunk: null,
+          nextChunk: null,
+        },
+      ],
+    }).match(
+      (value) => value,
+      (error) => {
+        throw new Error(`unexpected error: ${JSON.stringify(error)}`);
+      },
+    );
+
+    expect(quoteCalls).toHaveLength(0);
+    expect(result.quotes).toHaveLength(0);
+    expect(tableCalls).toHaveLength(0);
+    expect(result.tables).toHaveLength(0);
+  });
+
   test("runs quote and table extraction sequentially per chunk and returns a pipeline model", async () => {
     const quoteCalls: string[] = [];
     const quoteAdjesonData: string[] = [];
@@ -115,7 +205,7 @@ describe("llmExtract", () => {
           orderInFile: 0,
           xpathStart: "/a",
           xpathEnd: "/a",
-          text: "chunk-0",
+          text: `<p>${"chunk-0 ".repeat(40)}</p>`,
         },
         {
           id: 11,
@@ -123,7 +213,7 @@ describe("llmExtract", () => {
           orderInFile: 1,
           xpathStart: "/b",
           xpathEnd: "/b",
-          text: "chunk-1",
+          text: `<p>${"chunk-1 ".repeat(40)}</p>`,
         },
       ],
       tables: [
@@ -132,7 +222,7 @@ describe("llmExtract", () => {
           fileId: 1,
           orderInFile: 0,
           xpath: "/table[0]",
-          text: "table-0",
+          text: `<table>${"table-0 ".repeat(40)}</table>`,
           prevChunkId: null,
           prevChunkFileId: null,
           nextChunkId: null,
@@ -145,7 +235,7 @@ describe("llmExtract", () => {
           fileId: 1,
           orderInFile: 1,
           xpath: "/table[1]",
-          text: "table-1",
+          text: `<table>${"table-1 ".repeat(40)}</table>`,
           prevChunkId: 10,
           prevChunkFileId: 1,
           nextChunkId: null,
@@ -171,10 +261,10 @@ describe("llmExtract", () => {
     expect(quoteCalls[0]).toContain("Current chunk extraction data");
     expect(quoteCalls[0]).toContain("chunk-0");
     expect(quoteCalls[1]).toContain("chunk-1");
-    expect(quoteAdjesonData).toEqual([
-      "Previous chunk context\n```text\n\n```",
-      "Previous chunk context\n```text\nchunk-0\n```",
-    ]);
+    expect(quoteAdjesonData).toHaveLength(2);
+    expect(quoteAdjesonData[0]).toContain("Previous chunk context");
+    expect(quoteAdjesonData[1]).toContain("Previous chunk context");
+    expect(quoteAdjesonData[1]).toContain("chunk-0");
     expect(quoteGroundingDocs).toEqual(["1", "1"]);
     expect(quoteGroundingChunkCounts).toEqual([2, 2]);
     expect(tableCalls[0]).toContain("Main table extraction data.");

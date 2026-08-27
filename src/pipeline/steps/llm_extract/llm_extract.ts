@@ -1,5 +1,6 @@
 import { ResultAsync } from "neverthrow";
 import type { FileGraph } from "../../../db/repo";
+import { htmlToVisibleText } from "../../../utility/html_text";
 import type { GroundingChunkInput } from "../../grounding/quote_grounding";
 import type { GroundTableSourceInput } from "../../grounding/table_grounding";
 import { runQuoteExtractionAgent } from "../../llm_extraction/quotes";
@@ -27,6 +28,9 @@ type ExtractionLocation = Readonly<{
 
 const formatToolText = (label: string, text: string): string =>
   [label, "```text", text, "```"].join("\n");
+
+const shouldRunExtraction = (text: string): boolean =>
+  htmlToVisibleText(text).length >= 200;
 
 const findPreviousChunkText = (
   chunks: FileGraph["chunks"],
@@ -125,6 +129,10 @@ export const llmExtract = (
         runSequentialExtraction(
           fileGraph.tables,
           async (table): Promise<TableExtractionItemsWithCostAndGrounding> => {
+            if (!shouldRunExtraction(table.text)) {
+              return [];
+            }
+
             const agentInput = createTableAgentInput(fileGraph.file.id, table);
 
             return runTableExtractionAgent(agentInput).match(
@@ -143,6 +151,10 @@ export const llmExtract = (
         runSequentialExtraction(
           fileGraph.chunks,
           async (chunk): Promise<QuoteExtractionItemsWithCostAndGrounding> => {
+            if (!shouldRunExtraction(chunk.text)) {
+              return [];
+            }
+
             const previousChunkText = findPreviousChunkText(
               fileGraph.chunks,
               chunk.orderInFile,
