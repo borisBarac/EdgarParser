@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
+import { tokenize } from "./text";
 
 export type SearchDocument = Readonly<{
   id: string;
@@ -32,9 +33,6 @@ export type SearchIndex = Readonly<{
 const fieldName = "text";
 const k1 = 1.2;
 const b = 0.75;
-
-const tokenize = (text: string): readonly string[] =>
-  text.match(/[a-z0-9]+/gi)?.map((word) => word.toLowerCase()) ?? [];
 
 const countTerms = (tokens: readonly string[]): ReadonlyMap<string, number> => {
   const termFrequency = new Map<string, number>();

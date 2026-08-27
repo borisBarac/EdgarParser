@@ -1,12 +1,8 @@
 import { ok, type Result } from "neverthrow";
-import {
-  htmlToVisibleText,
-  normalizeWhitespace,
-} from "../../utility/html_text";
-import { searchDocuments } from "../../utility/search";
-import { bm25ToSearchScore } from "../../utility/search_scoring";
-import { jaccardSimilarity } from "../../utility/similarity";
+import { htmlToVisibleText } from "../../utility/html_text";
+import { normalizeWhitespace } from "../../utility/text";
 import type { Grounding } from "./model";
+import { scoreGroundingText } from "./score";
 
 export type GroundingChunkInput = Readonly<{
   id: string;
@@ -26,10 +22,15 @@ export type GroundQuoteInput = Readonly<{
 export type GroundQuoteError = never;
 
 const buildQueryText = (input: GroundQuoteInput): string => {
-  const parts = [input.quote, input.statement]
-    .filter((part): part is string => typeof part === "string")
-    .map(normalizeWhitespace)
-    .filter((part) => part.length > 0);
+  const parts: string[] = [];
+
+  if (input.quote !== null) {
+    const quote = normalizeWhitespace(input.quote);
+    if (quote.length > 0) parts.push(quote);
+  }
+
+  const statement = normalizeWhitespace(input.statement);
+  if (statement.length > 0) parts.push(statement);
 
   return normalizeWhitespace(parts.join(" \n "));
 };
@@ -49,31 +50,6 @@ const validateChunks = (
 ): readonly GroundingChunkInput[] =>
   sortChunks(chunks.filter((chunk) => chunk.id.trim().length > 0));
 
-type GroundingScore = NonNullable<Grounding>["score"];
-
-const scoreCorpus = (query: string, corpus: string): GroundingScore => {
-  if (query.trim().length === 0 || corpus.trim().length === 0) {
-    return {
-      bm25: 0,
-      jaccardSimilarity: 0,
-    };
-  }
-
-  const bm25 = searchDocuments(
-    [{ id: "combined", text: corpus }],
-    query,
-    1,
-  ).match(
-    (results) => results[0]?.score ?? 0,
-    () => 0,
-  );
-
-  return {
-    bm25: bm25ToSearchScore(bm25),
-    jaccardSimilarity: jaccardSimilarity(query, corpus),
-  };
-};
-
 export const groundQuoteExtractionItem = (
   input: GroundQuoteInput,
 ): Result<NonNullable<Grounding>, GroundQuoteError> => {
@@ -88,7 +64,7 @@ export const groundQuoteExtractionItem = (
       chunkXpathStart: chunk.xpathStart,
       chunkXpathEnd: chunk.xpathEnd,
     })),
-    score: scoreCorpus(queryText, corpus),
+    score: scoreGroundingText(queryText, corpus),
   };
 
   return ok(grounding);

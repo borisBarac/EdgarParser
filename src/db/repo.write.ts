@@ -1,6 +1,5 @@
-import { mapChunkRecord, mapFileGraph } from "./repo.mapping";
+import { mapFileGraph } from "./repo.mapping";
 import {
-  chunkSelect,
   type DbClient,
   type FileGraph,
   fileGraphInclude,
@@ -23,7 +22,7 @@ const createChunkRows = (
 
 const createTableRows = (
   fileId: number,
-  chunkByOrderInFile: ReadonlyMap<number, ReturnType<typeof mapChunkRecord>>,
+  chunkByOrderInFile: ReadonlyMap<number, number>,
   tables: readonly NormalizedSaveTableInput[],
 ) =>
   tables.map((table) => ({
@@ -34,19 +33,13 @@ const createTableRows = (
     prevChunkId:
       table.prevChunkOrderInFile === null
         ? null
-        : (chunkByOrderInFile.get(table.prevChunkOrderInFile)?.id ?? null),
-    prevChunkFileId:
-      table.prevChunkOrderInFile === null
-        ? null
-        : (chunkByOrderInFile.get(table.prevChunkOrderInFile)?.fileId ?? null),
+        : (chunkByOrderInFile.get(table.prevChunkOrderInFile) ?? null),
+    prevChunkFileId: table.prevChunkOrderInFile === null ? null : fileId,
     nextChunkId:
       table.nextChunkOrderInFile === null
         ? null
-        : (chunkByOrderInFile.get(table.nextChunkOrderInFile)?.id ?? null),
-    nextChunkFileId:
-      table.nextChunkOrderInFile === null
-        ? null
-        : (chunkByOrderInFile.get(table.nextChunkOrderInFile)?.fileId ?? null),
+        : (chunkByOrderInFile.get(table.nextChunkOrderInFile) ?? null),
+    nextChunkFileId: table.nextChunkOrderInFile === null ? null : fileId,
   }));
 
 export const saveFileGraphTransactional = async (
@@ -90,13 +83,14 @@ export const saveFileGraphTransactional = async (
           orderBy: {
             orderInFile: "asc",
           },
-          select: chunkSelect,
+          select: {
+            id: true,
+            orderInFile: true,
+          },
         });
 
   const chunkByOrderInFile = new Map(
-    createdChunks.map(
-      (chunk) => [chunk.orderInFile, mapChunkRecord(chunk)] as const,
-    ),
+    createdChunks.map((chunk) => [chunk.orderInFile, chunk.id] as const),
   );
 
   if (input.tables.length > 0) {

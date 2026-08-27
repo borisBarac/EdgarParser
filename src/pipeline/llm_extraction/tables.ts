@@ -1,4 +1,4 @@
-import { okAsync } from "neverthrow";
+import { ok } from "neverthrow";
 import { z } from "zod";
 
 import { runStructuredAgent } from "../../agent";
@@ -12,6 +12,7 @@ import {
   TableExtractionSchema,
   TableExtractionWithCostAndGroundingSchema,
 } from "../model";
+import { groundItems } from "./grounded_items";
 
 export const TableExtractionItemsSchema = TableExtractionSchema;
 export const TableExtractionItemsSchemaWithCostAndGrounding = z.array(
@@ -64,43 +65,27 @@ export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
     logTableExtraction("runTableExtractionAgent.output", output);
     logTableExtraction("runTableExtractionAgent.cost", cost);
 
-    const grounding =
-      input.source === undefined
-        ? undefined
-        : groundTableExtractionItem(
-            {
-              title: output.title,
-              currency: output.currency,
-              scale: output.scale,
-              rows: output.rows,
-            },
-            input.source,
-          ).match(
-            (value) => value,
-            (error) => {
-              logTableExtraction("runTableExtractionAgent.groundingFailed", {
-                title: output.title,
-                error,
-              });
-
-              return undefined;
-            },
-          );
-
-    logTableExtraction("runTableExtractionAgent.grounding", grounding);
-
-    const groundedItem = {
-      ...output,
-      grounding,
-      cost,
-    };
-
-    logTableExtraction("runTableExtractionAgent.groundedItem", groundedItem);
-
-    return okAsync(
-      logTableExtraction(
-        "runTableExtractionAgent.parsedGroundedItems",
-        TableExtractionItemsSchemaWithCostAndGrounding.parse([groundedItem]),
-      ),
-    );
+    return groundItems({
+      label: "runTableExtractionAgent",
+      items: [output],
+      schema: TableExtractionItemsSchemaWithCostAndGrounding,
+      describeItem: (item) => ({ title: item.title }),
+      groundItem: (item) =>
+        input.source === undefined
+          ? ok(undefined)
+          : groundTableExtractionItem(
+              {
+                title: item.title,
+                currency: item.currency,
+                scale: item.scale,
+                rows: item.rows,
+              },
+              input.source,
+            ),
+      buildItem: (item, grounding) => ({
+        ...item,
+        grounding,
+        cost,
+      }),
+    });
   });

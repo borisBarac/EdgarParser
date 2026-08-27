@@ -4,10 +4,10 @@ import type { PrismaClient } from "@prisma/client";
 import { okAsync, type ResultAsync } from "neverthrow";
 import type { FileGraph } from "../db/repo";
 import { createRepo } from "../db/repo";
+import { cleanHtmlFile } from "../html";
 import { logValue } from "../utility/debug";
 import type { PipelineExtractionModel, PipelineModel } from "./model";
 import { type ChunkStepError, chunk } from "./steps/chunk";
-import { clean } from "./steps/clean";
 import { llmExtract } from "./steps/llm_extract";
 import { type SaveStepError, save } from "./steps/save";
 import { addTotalCost } from "./steps/total_cost";
@@ -123,7 +123,7 @@ export const runPipeline = (
   logStep("pipeline.run.start", { inputPath, outputPath });
 
   return withStepLogging("pipeline.clean", { inputPath }, () =>
-    clean(inputPath).mapErr((cause) => cleanError(inputPath, cause)),
+    cleanHtmlFile(inputPath).mapErr((cause) => cleanError(inputPath, cause)),
   )
     .andThen((cleanedFile) =>
       withStepLogging(

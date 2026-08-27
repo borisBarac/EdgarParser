@@ -81,19 +81,10 @@ const readRequiredEnv = (): Result<AgentEnv, StructuredAgentError> => {
     }
   }
 
-  const pipelineKey = Bun.env.PIPELINE_KEY;
-  const llmUrl = Bun.env.LLM_URL;
-  const miniModel = Bun.env.MODEL_MINI;
-  const mainModel = Bun.env.MODEL_MAIN;
-
-  if (
-    pipelineKey === undefined ||
-    llmUrl === undefined ||
-    miniModel === undefined ||
-    mainModel === undefined
-  ) {
-    return err(missingEnvError("PIPELINE_KEY"));
-  }
+  const pipelineKey = Bun.env.PIPELINE_KEY!;
+  const llmUrl = Bun.env.LLM_URL!;
+  const miniModel = Bun.env.MODEL_MINI!;
+  const mainModel = Bun.env.MODEL_MAIN!;
 
   const parseNumber = (
     key: RequiredEnvKey,

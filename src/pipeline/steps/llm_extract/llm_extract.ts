@@ -32,17 +32,16 @@ const formatToolText = (label: string, text: string): string =>
 const shouldRunExtraction = (text: string): boolean =>
   htmlToVisibleText(text).length >= 200;
 
-const findPreviousChunkText = (
+const createChunkLookup = (
   chunks: FileGraph["chunks"],
-  orderInFile: number,
-): string =>
-  chunks.find((chunk) => chunk.orderInFile === orderInFile - 1)?.text ?? "";
+): ReadonlyMap<number, FileGraph["chunks"][number]> =>
+  new Map(chunks.map((chunk) => [chunk.orderInFile, chunk] as const));
 
-const findPreviousChunk = (
-  chunks: FileGraph["chunks"],
+const getPreviousChunk = (
+  chunkByOrderInFile: ReadonlyMap<number, FileGraph["chunks"][number]>,
   orderInFile: number,
 ): FileGraph["chunks"][number] | undefined =>
-  chunks.find((chunk) => chunk.orderInFile === orderInFile - 1);
+  chunkByOrderInFile.get(orderInFile - 1);
 
 const createChunkAgentInput = (
   chunk: FileGraph["chunks"][number],
@@ -158,6 +157,7 @@ export const llmExtract = (
       const chunks = isMiniExtractionEnabled
         ? fileGraph.chunks.slice(0, 30)
         : fileGraph.chunks;
+      const chunkByOrderInFile = createChunkLookup(fileGraph.chunks);
 
       const runTableExtractionSequentially = () =>
         runSequentialExtraction(
@@ -189,14 +189,11 @@ export const llmExtract = (
               return [];
             }
 
-            const previousChunkText = findPreviousChunkText(
-              fileGraph.chunks,
+            const previousChunk = getPreviousChunk(
+              chunkByOrderInFile,
               chunk.orderInFile,
             );
-            const previousChunk = findPreviousChunk(
-              fileGraph.chunks,
-              chunk.orderInFile,
-            );
+            const previousChunkText = previousChunk?.text ?? "";
 
             const agentInput = {
               ...createChunkAgentInput(chunk, previousChunkText),

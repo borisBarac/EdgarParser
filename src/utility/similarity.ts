@@ -1,5 +1,4 @@
-const tokenize = (value: string): readonly string[] =>
-  value.match(/[a-z0-9]+/gi)?.map((token) => token.toLowerCase()) ?? [];
+import { tokenize } from "./text";
 
 const uniqueTokens = (value: string): ReadonlySet<string> =>
   new Set(tokenize(value));

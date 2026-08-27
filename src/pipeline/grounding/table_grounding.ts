@@ -1,12 +1,8 @@
 import { ok, type Result } from "neverthrow";
-import {
-  htmlToVisibleText,
-  normalizeWhitespace,
-} from "../../utility/html_text";
-import { searchDocuments } from "../../utility/search";
-import { bm25ToSearchScore } from "../../utility/search_scoring";
-import { jaccardSimilarity } from "../../utility/similarity";
+import { htmlToVisibleText } from "../../utility/html_text";
+import { normalizeWhitespace } from "../../utility/text";
 import type { Grounding } from "./model";
+import { scoreGroundingText } from "./score";
 
 export type GroundTableRowValueInput = Readonly<{
   raw: string;
@@ -62,25 +58,6 @@ const buildQueryText = (input: GroundTableExtractionInput): string => {
 const buildCorpus = (input: GroundTableSourceInput): string =>
   htmlToVisibleText(input.html);
 
-const scoreCorpus = (query: string, corpus: string) => {
-  if (query.trim().length === 0 || corpus.trim().length === 0) {
-    return {
-      bm25: 0,
-      jaccardSimilarity: 0,
-    };
-  }
-
-  const bm25 = searchDocuments([{ id: "table", text: corpus }], query, 1).match(
-    (results) => results[0]?.score ?? 0,
-    () => 0,
-  );
-
-  return {
-    bm25: bm25ToSearchScore(bm25),
-    jaccardSimilarity: jaccardSimilarity(query, corpus),
-  };
-};
-
 export const groundTableExtractionItem = (
   extraction: GroundTableExtractionInput,
   source: GroundTableSourceInput,
@@ -97,6 +74,6 @@ export const groundTableExtractionItem = (
         chunkXpathEnd: source.xpath,
       },
     ],
-    score: scoreCorpus(query, corpus),
+    score: scoreGroundingText(query, corpus),
   });
 };

@@ -1,4 +1,4 @@
-import { okAsync } from "neverthrow";
+import { ok } from "neverthrow";
 import { z } from "zod";
 import { runStructuredAgent } from "../../agent";
 import type { AgentToolContents } from "../../agent/types";
@@ -11,6 +11,7 @@ import {
   QuoteExtractionItemSchema,
   QuoteExtractionItemWithCostAndGroundingSchema,
 } from "../model";
+import { groundItems } from "./grounded_items";
 
 export const QuoteExtractionItemsSchema = z.object({
   items: z.array(QuoteExtractionItemSchema),
@@ -73,46 +74,24 @@ export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
     logQuoteExtraction("runQuoteExtractionAgent.output", output);
     logQuoteExtraction("runQuoteExtractionAgent.cost", cost);
 
-    const groundedItems = output.items.map((item) => {
-      const grounding =
+    return groundItems({
+      label: "runQuoteExtractionAgent",
+      items: output.items,
+      schema: QuoteExtractionItemsSchemaWithCostAndGrounding,
+      describeItem: (item) => ({ statement: item.statement }),
+      groundItem: (item) =>
         input.documentId === undefined || input.chunks === undefined
-          ? undefined
+          ? ok(undefined)
           : groundQuoteExtractionItem({
               documentId: input.documentId,
               statement: item.statement,
               quote: item.quote,
               chunks: input.chunks,
-            }).match(
-              (value) => value,
-              (error) => {
-                logQuoteExtraction("runQuoteExtractionAgent.groundingFailed", {
-                  statement: item.statement,
-                  error,
-                });
-
-                return undefined;
-              },
-            );
-
-      logQuoteExtraction("runQuoteExtractionAgent.grounding", grounding);
-
-      const groundedItem = {
+            }),
+      buildItem: (item, grounding) => ({
         ...item,
         grounding,
         cost,
-      };
-
-      logQuoteExtraction("runQuoteExtractionAgent.groundedItem", groundedItem);
-
-      return groundedItem;
+      }),
     });
-
-    logQuoteExtraction("runQuoteExtractionAgent.groundedItems", groundedItems);
-
-    return okAsync(
-      logQuoteExtraction(
-        "runQuoteExtractionAgent.parsedGroundedItems",
-        QuoteExtractionItemsSchemaWithCostAndGrounding.parse(groundedItems),
-      ),
-    );
   });

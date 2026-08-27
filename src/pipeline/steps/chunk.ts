@@ -23,6 +23,7 @@ import {
 } from "../../html/xpath";
 import { estimateStringTokens } from "../../token";
 import { type FileManagerError, readFile } from "../../utility/file_manager";
+import { normalizeWhitespace } from "../../utility/text";
 
 export type ChunkStepError = Readonly<
   | {
@@ -84,9 +85,6 @@ type PendingTable = Readonly<{
 type BuildFileGraphError = HtmlXPathError | ChunkTooLargeError;
 
 const isElementNode = (node: Node): node is Element => node.nodeType === 1;
-
-const normalizeWhitespace = (value: string): string =>
-  value.replace(/\s+/g, " ").trim();
 
 const serializeNodes = (document: Document, nodes: readonly Node[]): string => {
   const container = document.createElement("div");
