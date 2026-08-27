@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { runStructuredAgent } from "../../agent";
 import type { AgentToolContents } from "../../agent/types";
+import { logValue } from "../../utility/debug";
 import {
   type GroundTableSourceInput,
   groundTableExtractionItem,
@@ -49,6 +50,9 @@ Use getExtractionData first. Use GetAdjesonData only if needed.
 
 Return the table items.`;
 
+const logTableExtraction = <T>(label: string, value: T): T =>
+  logValue(`--- src/pipeline/llm_extraction/tables.ts: ${label} ---`, value);
+
 export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
   runStructuredAgent({
     systemPrompt: tableExtractionSystemPrompt,
@@ -57,6 +61,9 @@ export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
     model: "mini",
     tools: input.tools,
   }).andThen(({ output, cost }) => {
+    logTableExtraction("runTableExtractionAgent.output", output);
+    logTableExtraction("runTableExtractionAgent.cost", cost);
+
     const grounding =
       input.source === undefined
         ? undefined
@@ -71,7 +78,7 @@ export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
           ).match(
             (value) => value,
             (error) => {
-              console.log("table grounding failed", {
+              logTableExtraction("runTableExtractionAgent.groundingFailed", {
                 title: output.title,
                 error,
               });
@@ -80,13 +87,20 @@ export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
             },
           );
 
+    logTableExtraction("runTableExtractionAgent.grounding", grounding);
+
     const groundedItem = {
       ...output,
       grounding,
       cost,
     };
 
+    logTableExtraction("runTableExtractionAgent.groundedItem", groundedItem);
+
     return okAsync(
-      TableExtractionItemsSchemaWithCostAndGrounding.parse([groundedItem]),
+      logTableExtraction(
+        "runTableExtractionAgent.parsedGroundedItems",
+        TableExtractionItemsSchemaWithCostAndGrounding.parse([groundedItem]),
+      ),
     );
   });

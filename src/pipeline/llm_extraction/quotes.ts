@@ -2,6 +2,7 @@ import { okAsync } from "neverthrow";
 import { z } from "zod";
 import { runStructuredAgent } from "../../agent";
 import type { AgentToolContents } from "../../agent/types";
+import { logValue } from "../../utility/debug";
 import {
   type GroundingChunkInput,
   groundQuoteExtractionItem,
@@ -58,6 +59,9 @@ Use getExtractionData first. Use GetAdjesonData only if needed.
 
 Return { items: [...] }.`;
 
+const logQuoteExtraction = <T>(label: string, value: T): T =>
+  logValue(`--- src/pipeline/llm_extraction/quotes.ts: ${label} ---`, value);
+
 export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
   runStructuredAgent({
     systemPrompt: quoteExtractionSystemPrompt,
@@ -66,6 +70,9 @@ export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
     model: "mini",
     tools: input.tools,
   }).andThen(({ output, cost }) => {
+    logQuoteExtraction("runQuoteExtractionAgent.output", output);
+    logQuoteExtraction("runQuoteExtractionAgent.cost", cost);
+
     const groundedItems = output.items.map((item) => {
       const grounding =
         input.documentId === undefined || input.chunks === undefined
@@ -78,7 +85,7 @@ export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
             }).match(
               (value) => value,
               (error) => {
-                console.log("quote grounding failed", {
+                logQuoteExtraction("runQuoteExtractionAgent.groundingFailed", {
                   statement: item.statement,
                   error,
                 });
@@ -87,14 +94,25 @@ export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
               },
             );
 
-      return {
+      logQuoteExtraction("runQuoteExtractionAgent.grounding", grounding);
+
+      const groundedItem = {
         ...item,
         grounding,
         cost,
       };
+
+      logQuoteExtraction("runQuoteExtractionAgent.groundedItem", groundedItem);
+
+      return groundedItem;
     });
 
+    logQuoteExtraction("runQuoteExtractionAgent.groundedItems", groundedItems);
+
     return okAsync(
-      QuoteExtractionItemsSchemaWithCostAndGrounding.parse(groundedItems),
+      logQuoteExtraction(
+        "runQuoteExtractionAgent.parsedGroundedItems",
+        QuoteExtractionItemsSchemaWithCostAndGrounding.parse(groundedItems),
+      ),
     );
   });
