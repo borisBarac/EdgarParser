@@ -11,9 +11,11 @@
     "test": "bun test",
     "test:unit": "bun test src",
     "test:e2e": "bun test e2e",
+    "db:bootstrap": "bunx --bun prisma migrate dev && bunx --bun prisma generate",
     "db:migrate": "bunx --bun prisma migrate dev",
     "db:generate": "bunx --bun prisma generate",
-    "db:studio": "bunx --bun prisma studio"
+    "db:studio": "bunx --bun prisma studio",
+    "db:reset-local": "rm -rf DATABASE/edgar.db DATABASE/prisma/migrations"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.10",
