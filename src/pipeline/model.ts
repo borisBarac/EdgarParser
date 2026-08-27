@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { GroundingSchema } from "./grounding/model";
 
-const CostSchema = z.object({
+export const CostSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
   totalTokens: z.number().int().nonnegative(),
@@ -96,9 +96,17 @@ export type TableExtractionItemsWithCostAndGrounding = z.infer<
   typeof TableExtractionItemsSchemaWithCostAndGrounding
 >;
 
-export const PipelineModelSchema = z.object({
+export const PipelineExtractionModelSchema = z.object({
   quotes: QuoteExtractionItemsSchemaWithCostAndGrounding,
   tables: TableExtractionItemsSchemaWithCostAndGrounding,
+});
+
+export type PipelineExtractionModel = z.infer<
+  typeof PipelineExtractionModelSchema
+>;
+
+export const PipelineModelSchema = PipelineExtractionModelSchema.extend({
+  totalCost: CostSchema,
 });
 
 export type PipelineModel = z.infer<typeof PipelineModelSchema>;

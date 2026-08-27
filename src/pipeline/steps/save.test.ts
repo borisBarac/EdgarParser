@@ -7,6 +7,15 @@ const tempRoot = resolve(
   `save-step-${crypto.randomUUID()}`,
 );
 
+const totalCost = {
+  inputTokens: 1,
+  outputTokens: 2,
+  totalTokens: 3,
+  inputUsd: 0.01,
+  outputUsd: 0.02,
+  totalUsd: 0.03,
+};
+
 beforeAll(async () => {
   await mkdir(tempRoot, { recursive: true });
 });
@@ -39,6 +48,7 @@ describe("save step", () => {
         },
       ],
       tables: [],
+      totalCost,
     });
 
     const result = await save(model, outputPath);
@@ -59,7 +69,18 @@ describe("save step", () => {
     const { PipelineModelSchema } = await import("../model");
     const { save } = await import("./save");
 
-    const model = PipelineModelSchema.parse({ quotes: [], tables: [] });
+    const model = PipelineModelSchema.parse({
+      quotes: [],
+      tables: [],
+      totalCost: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        inputUsd: 0,
+        outputUsd: 0,
+        totalUsd: 0,
+      },
+    });
     const result = await save(model, tempRoot);
 
     expect(result.isErr()).toBe(true);

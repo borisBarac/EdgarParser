@@ -1,15 +1,16 @@
 import { basename, extname, join } from "node:path";
 import { performance } from "node:perf_hooks";
 import type { PrismaClient } from "@prisma/client";
-import type { ResultAsync } from "neverthrow";
+import { okAsync, type ResultAsync } from "neverthrow";
 import type { FileGraph } from "../db/repo";
 import { createRepo } from "../db/repo";
 import { logValue } from "../utility/debug";
-import type { PipelineModel } from "./model";
+import type { PipelineExtractionModel, PipelineModel } from "./model";
 import { type ChunkStepError, chunk } from "./steps/chunk";
 import { clean } from "./steps/clean";
 import { llmExtract } from "./steps/llm_extract";
 import { type SaveStepError, save } from "./steps/save";
+import { addTotalCost } from "./steps/total_cost";
 
 type RunPipelineError = Readonly<
   | {
@@ -147,6 +148,16 @@ export const runPipeline = (
           llmExtract(fileGraph).mapErr((cause) =>
             llmExtractError(inputPath, cause),
           ),
+      ),
+    )
+    .andThen((model: PipelineExtractionModel) =>
+      withStepLogging(
+        "pipeline.total_cost",
+        {
+          quoteCount: model.quotes.length,
+          tableCount: model.tables.length,
+        },
+        () => okAsync(addTotalCost(model)),
       ),
     )
     .andThen((model: PipelineModel) =>

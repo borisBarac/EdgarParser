@@ -6,11 +6,11 @@ import type { GroundTableSourceInput } from "../../grounding/table_grounding";
 import { runQuoteExtractionAgent } from "../../llm_extraction/quotes";
 import { runTableExtractionAgent } from "../../llm_extraction/tables";
 import type {
-  PipelineModel,
+  PipelineExtractionModel,
   QuoteExtractionItemsWithCostAndGrounding,
   TableExtractionItemsWithCostAndGrounding,
 } from "../../model";
-import { PipelineModelSchema } from "../../model";
+import { PipelineExtractionModelSchema } from "../../model";
 
 type LlmExtractError = Readonly<{
   readonly type: "llm_extract_failed";
@@ -122,7 +122,7 @@ export const runSequentialExtraction = async <TItem, TSource>(
 
 export const llmExtract = (
   fileGraph: FileGraph,
-): ResultAsync<PipelineModel, LlmExtractError> =>
+): ResultAsync<PipelineExtractionModel, LlmExtractError> =>
   ResultAsync.fromPromise(
     (async () => {
       const isMiniExtractionEnabled = Bun.env.MINI_EXTRACTION === "1";
@@ -193,7 +193,7 @@ export const llmExtract = (
       const flattenedTables: TableExtractionItemsWithCostAndGrounding =
         perChunkTableResults;
 
-      return PipelineModelSchema.parse({
+      return PipelineExtractionModelSchema.parse({
         quotes: flattenedQuotes,
         tables: flattenedTables,
       });
