@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import {
   QuoteExtractionItemsSchema,
-  QuoteExtractionItemsSchemaWithCost,
+  QuoteExtractionItemsSchemaWithCostAndGrounding,
   quoteExtractionPrompt,
   quoteExtractionSystemPrompt,
 } from "./quotes";
@@ -39,12 +39,11 @@ describe("quote extraction agent", () => {
 
   it("supports post-processed cost enrichment", () => {
     expect(
-      QuoteExtractionItemsSchemaWithCost.safeParse([
+      QuoteExtractionItemsSchemaWithCostAndGrounding.safeParse([
         {
           type: "risk",
           statement: "Example",
           quote: null,
-          grounding: undefined,
           cost: {
             inputTokens: 1,
             outputTokens: 2,
@@ -52,6 +51,14 @@ describe("quote extraction agent", () => {
             inputUsd: 0.1,
             outputUsd: 0.2,
             totalUsd: 0.3,
+          },
+          grounding: {
+            documentId: "doc-1",
+            chunks: [],
+            score: {
+              bm25: 0,
+              jaccardSimilarity: 0,
+            },
           },
         },
       ]).success,

@@ -16,7 +16,6 @@ export const QuoteExtractionItemSchema = z.object({
   type: z.enum(["guidance", "risk", "management_commentary", "other"]),
   statement: z.string(),
   quote: z.string().nullable(),
-  grounding: GroundingSchema,
 });
 
 export type QuoteExtractionItem = z.infer<typeof QuoteExtractionItemSchema>;
@@ -26,16 +25,25 @@ export const QuoteExtractionItemWithCostSchema =
     cost: CostSchema,
   });
 
-export const QuoteExtractionItemsSchemaWithCost = z.array(
-  QuoteExtractionItemWithCostSchema,
+export const QuoteExtractionItemWithCostAndGroundingSchema =
+  QuoteExtractionItemWithCostSchema.extend({
+    grounding: GroundingSchema,
+  });
+
+export const QuoteExtractionItemsSchemaWithCostAndGrounding = z.array(
+  QuoteExtractionItemWithCostAndGroundingSchema,
 );
 
 export type QuoteExtractionItemWithCost = z.infer<
   typeof QuoteExtractionItemWithCostSchema
 >;
 
-export type QuoteExtractionItemsWithCost = z.infer<
-  typeof QuoteExtractionItemsSchemaWithCost
+export type QuoteExtractionItemWithCostAndGrounding = z.infer<
+  typeof QuoteExtractionItemWithCostAndGroundingSchema
+>;
+
+export type QuoteExtractionItemsWithCostAndGrounding = z.infer<
+  typeof QuoteExtractionItemsSchemaWithCostAndGrounding
 >;
 
 export const TableExtractionSchema = z.object({
@@ -59,7 +67,6 @@ export const TableExtractionSchema = z.object({
       ),
     }),
   ),
-  grounding: GroundingSchema,
 });
 
 export type TableExtraction = z.infer<typeof TableExtractionSchema>;
@@ -68,21 +75,30 @@ export const TableExtractionWithCostSchema = TableExtractionSchema.extend({
   cost: CostSchema,
 });
 
-export const TableExtractionItemsSchemaWithCost = z.array(
-  TableExtractionWithCostSchema,
+export const TableExtractionWithCostAndGroundingSchema =
+  TableExtractionWithCostSchema.extend({
+    grounding: GroundingSchema,
+  });
+
+export const TableExtractionItemsSchemaWithCostAndGrounding = z.array(
+  TableExtractionWithCostAndGroundingSchema,
 );
 
 export type TableExtractionWithCost = z.infer<
   typeof TableExtractionWithCostSchema
 >;
 
-export type TableExtractionItemsWithCost = z.infer<
-  typeof TableExtractionItemsSchemaWithCost
+export type TableExtractionWithCostAndGrounding = z.infer<
+  typeof TableExtractionWithCostAndGroundingSchema
+>;
+
+export type TableExtractionItemsWithCostAndGrounding = z.infer<
+  typeof TableExtractionItemsSchemaWithCostAndGrounding
 >;
 
 export const PipelineModelSchema = z.object({
-  quotes: QuoteExtractionItemsSchemaWithCost,
-  tables: TableExtractionItemsSchemaWithCost,
+  quotes: QuoteExtractionItemsSchemaWithCostAndGrounding,
+  tables: TableExtractionItemsSchemaWithCostAndGrounding,
 });
 
 export type PipelineModel = z.infer<typeof PipelineModelSchema>;

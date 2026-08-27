@@ -7,19 +7,22 @@ import {
   type GroundTableSourceInput,
   groundTableExtractionItem,
 } from "../grounding/table_grounding";
-import { TableExtractionSchema, TableExtractionWithCostSchema } from "../model";
+import {
+  TableExtractionSchema,
+  TableExtractionWithCostAndGroundingSchema,
+} from "../model";
 
 export const TableExtractionItemsSchema = z.array(TableExtractionSchema);
-export const TableExtractionItemsSchemaWithCost = z.array(
-  TableExtractionWithCostSchema,
+export const TableExtractionItemsSchemaWithCostAndGrounding = z.array(
+  TableExtractionWithCostAndGroundingSchema,
 );
 
 export type TableExtractionItems = z.infer<typeof TableExtractionItemsSchema>;
-export type TableExtractionWithCost = z.infer<
-  typeof TableExtractionWithCostSchema
+export type TableExtractionWithCostAndGrounding = z.infer<
+  typeof TableExtractionWithCostAndGroundingSchema
 >;
-export type TableExtractionItemsWithCost = z.infer<
-  typeof TableExtractionItemsSchemaWithCost
+export type TableExtractionItemsWithCostAndGrounding = z.infer<
+  typeof TableExtractionItemsSchemaWithCostAndGrounding
 >;
 
 export type TableExtractionAgentInput = Readonly<{
@@ -85,5 +88,7 @@ export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
       };
     });
 
-    return okAsync(TableExtractionItemsSchemaWithCost.parse(groundedItems));
+    return okAsync(
+      TableExtractionItemsSchemaWithCostAndGrounding.parse(groundedItems),
+    );
   });

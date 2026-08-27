@@ -8,21 +8,21 @@ import {
 } from "../grounding/quote_grounding";
 import {
   QuoteExtractionItemSchema,
-  QuoteExtractionItemWithCostSchema,
+  QuoteExtractionItemWithCostAndGroundingSchema,
 } from "../model";
 
 export const QuoteExtractionItemsSchema = z.array(QuoteExtractionItemSchema);
-export const QuoteExtractionItemsSchemaWithCost = z.array(
-  QuoteExtractionItemWithCostSchema,
+export const QuoteExtractionItemsSchemaWithCostAndGrounding = z.array(
+  QuoteExtractionItemWithCostAndGroundingSchema,
 );
 
 export type QuoteExtractionItem = z.infer<typeof QuoteExtractionItemSchema>;
 export type QuoteExtractionItems = z.infer<typeof QuoteExtractionItemsSchema>;
-export type QuoteExtractionItemWithCost = z.infer<
-  typeof QuoteExtractionItemWithCostSchema
+export type QuoteExtractionItemWithCostAndGrounding = z.infer<
+  typeof QuoteExtractionItemWithCostAndGroundingSchema
 >;
-export type QuoteExtractionItemsWithCost = z.infer<
-  typeof QuoteExtractionItemsSchemaWithCost
+export type QuoteExtractionItemsWithCostAndGrounding = z.infer<
+  typeof QuoteExtractionItemsSchemaWithCostAndGrounding
 >;
 
 export type QuoteExtractionAgentInput = Readonly<{
@@ -87,5 +87,7 @@ export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
       };
     });
 
-    return okAsync(QuoteExtractionItemsSchemaWithCost.parse(groundedItems));
+    return okAsync(
+      QuoteExtractionItemsSchemaWithCostAndGrounding.parse(groundedItems),
+    );
   });

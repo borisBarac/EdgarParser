@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import {
   TableExtractionItemsSchema,
-  TableExtractionItemsSchemaWithCost,
+  TableExtractionItemsSchemaWithCostAndGrounding,
   tableExtractionPrompt,
   tableExtractionSystemPrompt,
 } from "./tables";
@@ -43,14 +43,13 @@ describe("table extraction agent", () => {
 
   it("supports post-processed cost enrichment", () => {
     expect(
-      TableExtractionItemsSchemaWithCost.safeParse([
+      TableExtractionItemsSchemaWithCostAndGrounding.safeParse([
         {
           title: "Example",
           currency: null,
           scale: null,
           columns: [],
           rows: [],
-          grounding: undefined,
           cost: {
             inputTokens: 1,
             outputTokens: 2,
@@ -58,6 +57,14 @@ describe("table extraction agent", () => {
             inputUsd: 0.1,
             outputUsd: 0.2,
             totalUsd: 0.3,
+          },
+          grounding: {
+            documentId: "doc-1",
+            chunks: [],
+            score: {
+              bm25: 0,
+              jaccardSimilarity: 0,
+            },
           },
         },
       ]).success,

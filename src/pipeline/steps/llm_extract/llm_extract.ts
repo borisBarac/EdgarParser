@@ -6,8 +6,8 @@ import { runQuoteExtractionAgent } from "../../llm_extraction/quotes";
 import { runTableExtractionAgent } from "../../llm_extraction/tables";
 import type {
   PipelineModel,
-  QuoteExtractionItemsWithCost,
-  TableExtractionItemsWithCost,
+  QuoteExtractionItemsWithCostAndGrounding,
+  TableExtractionItemsWithCostAndGrounding,
 } from "../../model";
 import { PipelineModelSchema } from "../../model";
 
@@ -124,7 +124,7 @@ export const llmExtract = (
       const runTableExtractionSequentially = () =>
         runSequentialExtraction(
           fileGraph.tables,
-          async (table): Promise<TableExtractionItemsWithCost> => {
+          async (table): Promise<TableExtractionItemsWithCostAndGrounding> => {
             const agentInput = createTableAgentInput(fileGraph.file.id, table);
 
             return runTableExtractionAgent(agentInput).match(
@@ -142,7 +142,7 @@ export const llmExtract = (
       const [perChunkQuoteResults, perChunkTableResults] = await Promise.all([
         runSequentialExtraction(
           fileGraph.chunks,
-          async (chunk): Promise<QuoteExtractionItemsWithCost> => {
+          async (chunk): Promise<QuoteExtractionItemsWithCostAndGrounding> => {
             const previousChunkText = findPreviousChunkText(
               fileGraph.chunks,
               chunk.orderInFile,
@@ -168,9 +168,9 @@ export const llmExtract = (
         runTableExtractionSequentially(),
       ]);
 
-      const flattenedQuotes: QuoteExtractionItemsWithCost =
+      const flattenedQuotes: QuoteExtractionItemsWithCostAndGrounding =
         perChunkQuoteResults;
-      const flattenedTables: TableExtractionItemsWithCost =
+      const flattenedTables: TableExtractionItemsWithCostAndGrounding =
         perChunkTableResults;
 
       return PipelineModelSchema.parse({
