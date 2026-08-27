@@ -1,5 +1,99 @@
+// @ts-nocheck
 import { describe, expect, mock, test } from "bun:test";
 import { okAsync } from "neverthrow";
+
+const baseCost = {
+  inputTokens: 1,
+  outputTokens: 1,
+  totalTokens: 2,
+  inputUsd: 0.01,
+  outputUsd: 0.01,
+  totalUsd: 0.02,
+} as const;
+
+const unwrapResult = async <T, E>(result: {
+  match: (ok: (value: T) => T, err: (error: E) => T) => Promise<T>;
+}) =>
+  result.match(
+    (value) => value,
+    (error) => {
+      throw new Error(`unexpected error: ${JSON.stringify(error)}`);
+    },
+  );
+
+const withEnv = async <T>(
+  key: "MINI_EXTRACTION",
+  value: string | undefined,
+  run: () => Promise<T>,
+) => {
+  const previous = Bun.env[key];
+
+  if (value === undefined) {
+    delete Bun.env[key];
+  } else {
+    Bun.env[key] = value;
+  }
+
+  try {
+    return await run();
+  } finally {
+    if (previous === undefined) {
+      delete Bun.env[key];
+    } else {
+      Bun.env[key] = previous;
+    }
+  }
+};
+
+const makeChunk = (index: number) => ({
+  id: 10 + index,
+  fileId: 1,
+  orderInFile: index,
+  xpathStart: `/chunk-${index}`,
+  xpathEnd: `/chunk-${index}`,
+  text: `<p>${`chunk-${index} `.repeat(40)}</p>`,
+});
+
+const makeTable = (index: number, includePreviousChunk = false) => ({
+  id: 20 + index,
+  fileId: 1,
+  orderInFile: index,
+  xpath: `/table[${index}]`,
+  text: `<table>${`table-${index} `.repeat(40)}</table>`,
+  prevChunkId: includePreviousChunk ? 10 : null,
+  prevChunkFileId: includePreviousChunk ? 1 : null,
+  nextChunkId: null,
+  nextChunkFileId: null,
+  prevChunk: includePreviousChunk
+    ? {
+        id: 10,
+        fileId: 1,
+        orderInFile: 0,
+        xpathStart: "/a",
+        xpathEnd: "/a",
+        text: "chunk-0",
+      }
+    : null,
+  nextChunk: null,
+});
+
+const makeQuote = (index: number, type: "guidance" | "risk") => ({
+  type,
+  statement: `quote-${index}`,
+  quote: `quote-${index}`,
+  grounding: undefined,
+  cost: baseCost,
+});
+
+const makeTableResult = (index: number) => ({
+  title: `table-${index}`,
+  currency: null,
+  scale: null,
+  columns: [],
+  rows: [],
+  grounding: undefined,
+  cost: baseCost,
+});
 
 describe("llmExtract", () => {
   test("skips quote and table extraction for short visible content", async () => {
@@ -14,7 +108,6 @@ describe("llmExtract", () => {
         };
       }) => {
         quoteCalls.push(input.tools.extractionData);
-
         return okAsync([]);
       },
     }));
@@ -24,66 +117,45 @@ describe("llmExtract", () => {
         readonly tools: { readonly extractionData: string };
       }) => {
         tableCalls.push(input.tools.extractionData);
-
-        return okAsync([
-          {
-            title: "table",
-            currency: null,
-            scale: null,
-            columns: [],
-            rows: [],
-            grounding: undefined,
-            cost: {
-              inputTokens: 1,
-              outputTokens: 1,
-              totalTokens: 2,
-              inputUsd: 0.01,
-              outputUsd: 0.01,
-              totalUsd: 0.02,
-            },
-          },
-        ]);
+        return okAsync([makeTableResult(0)]);
       },
     }));
 
     const { llmExtract } = await import("./llm_extract");
 
-    const result = await llmExtract({
-      file: {
-        id: 1,
-        orgFilePath: "/tmp/input.html",
-        cleanFilePath: "/tmp/clean.html",
-      },
-      chunks: [
-        {
-          id: 10,
-          fileId: 1,
-          orderInFile: 0,
-          xpathStart: "/a",
-          xpathEnd: "/a",
-          text: "<p>short chunk</p>",
+    const result = await unwrapResult(
+      llmExtract({
+        file: {
+          id: 1,
+          orgFilePath: "/tmp/input.html",
+          cleanFilePath: "/tmp/clean.html",
         },
-      ],
-      tables: [
-        {
-          id: 20,
-          fileId: 1,
-          orderInFile: 0,
-          xpath: "/table[0]",
-          text: "table-0",
-          prevChunkId: null,
-          prevChunkFileId: null,
-          nextChunkId: null,
-          nextChunkFileId: null,
-          prevChunk: null,
-          nextChunk: null,
-        },
-      ],
-    }).match(
-      (value) => value,
-      (error) => {
-        throw new Error(`unexpected error: ${JSON.stringify(error)}`);
-      },
+        chunks: [
+          {
+            id: 10,
+            fileId: 1,
+            orderInFile: 0,
+            xpathStart: "/a",
+            xpathEnd: "/a",
+            text: "<p>short chunk</p>",
+          },
+        ],
+        tables: [
+          {
+            id: 20,
+            fileId: 1,
+            orderInFile: 0,
+            xpath: "/table[0]",
+            text: "table-0",
+            prevChunkId: null,
+            prevChunkFileId: null,
+            nextChunkId: null,
+            nextChunkFileId: null,
+            prevChunk: null,
+            nextChunk: null,
+          },
+        ],
+      }),
     );
 
     expect(quoteCalls).toHaveLength(0);
@@ -117,38 +189,8 @@ describe("llmExtract", () => {
 
         return okAsync(
           input.tools.extractionData.includes("chunk-0")
-            ? [
-                {
-                  type: "guidance",
-                  statement: "quote-0",
-                  quote: "quote-0",
-                  grounding: undefined,
-                  cost: {
-                    inputTokens: 1,
-                    outputTokens: 2,
-                    totalTokens: 3,
-                    inputUsd: 0.01,
-                    outputUsd: 0.02,
-                    totalUsd: 0.03,
-                  },
-                },
-              ]
-            : [
-                {
-                  type: "risk",
-                  statement: "quote-1",
-                  quote: null,
-                  grounding: undefined,
-                  cost: {
-                    inputTokens: 4,
-                    outputTokens: 5,
-                    totalTokens: 9,
-                    inputUsd: 0.04,
-                    outputUsd: 0.05,
-                    totalUsd: 0.09,
-                  },
-                },
-              ],
+            ? [makeQuote(0, "guidance")]
+            : [makeQuote(1, "risk")],
         );
       },
     }));
@@ -171,20 +213,8 @@ describe("llmExtract", () => {
 
         return okAsync([
           {
+            ...makeTableResult(tableCalls.length - 1),
             title: input.tools.extractionData,
-            currency: null,
-            scale: null,
-            columns: [],
-            rows: [],
-            grounding: undefined,
-            cost: {
-              inputTokens: 1,
-              outputTokens: 1,
-              totalTokens: 2,
-              inputUsd: 0.01,
-              outputUsd: 0.01,
-              totalUsd: 0.02,
-            },
           },
         ]);
       },
@@ -192,70 +222,16 @@ describe("llmExtract", () => {
 
     const { llmExtract } = await import("./llm_extract");
 
-    const result = await llmExtract({
-      file: {
-        id: 1,
-        orgFilePath: "/tmp/input.html",
-        cleanFilePath: "/tmp/clean.html",
-      },
-      chunks: [
-        {
-          id: 10,
-          fileId: 1,
-          orderInFile: 0,
-          xpathStart: "/a",
-          xpathEnd: "/a",
-          text: `<p>${"chunk-0 ".repeat(40)}</p>`,
+    const result = await unwrapResult(
+      llmExtract({
+        file: {
+          id: 1,
+          orgFilePath: "/tmp/input.html",
+          cleanFilePath: "/tmp/clean.html",
         },
-        {
-          id: 11,
-          fileId: 1,
-          orderInFile: 1,
-          xpathStart: "/b",
-          xpathEnd: "/b",
-          text: `<p>${"chunk-1 ".repeat(40)}</p>`,
-        },
-      ],
-      tables: [
-        {
-          id: 20,
-          fileId: 1,
-          orderInFile: 0,
-          xpath: "/table[0]",
-          text: `<table>${"table-0 ".repeat(40)}</table>`,
-          prevChunkId: null,
-          prevChunkFileId: null,
-          nextChunkId: null,
-          nextChunkFileId: null,
-          prevChunk: null,
-          nextChunk: null,
-        },
-        {
-          id: 21,
-          fileId: 1,
-          orderInFile: 1,
-          xpath: "/table[1]",
-          text: `<table>${"table-1 ".repeat(40)}</table>`,
-          prevChunkId: 10,
-          prevChunkFileId: 1,
-          nextChunkId: null,
-          nextChunkFileId: null,
-          prevChunk: {
-            id: 10,
-            fileId: 1,
-            orderInFile: 0,
-            xpathStart: "/a",
-            xpathEnd: "/a",
-            text: "chunk-0",
-          },
-          nextChunk: null,
-        },
-      ],
-    }).match(
-      (value) => value,
-      (error) => {
-        throw new Error(`unexpected error: ${JSON.stringify(error)}`);
-      },
+        chunks: [makeChunk(0), makeChunk(1)],
+        tables: [makeTable(0), makeTable(1, true)],
+      }),
     );
 
     expect(quoteCalls[0]).toContain("Current chunk extraction data");
@@ -282,6 +258,52 @@ describe("llmExtract", () => {
     expect(result.quotes[1]?.statement).toBe("quote-1");
     expect(result.tables[0]?.title ?? "").toContain("table-0");
     expect(result.tables[1]?.title ?? "").toContain("table-1");
+  });
+
+  test("caps quote and table extraction when MINI_EXTRACTION=1", async () => {
+    await withEnv("MINI_EXTRACTION", "1", async () => {
+      const quoteCalls: string[] = [];
+      const tableCalls: string[] = [];
+
+      mock.module("../../llm_extraction/quotes", () => ({
+        runQuoteExtractionAgent: (input: {
+          readonly tools: { readonly extractionData: string };
+        }) => {
+          quoteCalls.push(input.tools.extractionData);
+          return okAsync([makeQuote(quoteCalls.length - 1, "guidance")]);
+        },
+      }));
+
+      mock.module("../../llm_extraction/tables", () => ({
+        runTableExtractionAgent: (input: {
+          readonly tools: { readonly extractionData: string };
+        }) => {
+          tableCalls.push(input.tools.extractionData);
+          return okAsync([makeTableResult(tableCalls.length - 1)]);
+        },
+      }));
+
+      const { llmExtract } = await import("./llm_extract");
+
+      const result = await unwrapResult(
+        llmExtract({
+          file: {
+            id: 1,
+            orgFilePath: "/tmp/input.html",
+            cleanFilePath: "/tmp/clean.html",
+          },
+          chunks: Array.from({ length: 31 }, (_, index) => makeChunk(index)),
+          tables: Array.from({ length: 11 }, (_, index) => makeTable(index)),
+        }),
+      );
+
+      expect(quoteCalls).toHaveLength(30);
+      expect(tableCalls).toHaveLength(10);
+      expect(quoteCalls[29]).toContain("chunk-29");
+      expect(tableCalls[9]).toContain("table-9");
+      expect(result.quotes).toHaveLength(30);
+      expect(result.tables).toHaveLength(10);
+    });
   });
 
   test("creates table agent input with html extraction data and adjacent chunk text", async () => {

@@ -125,9 +125,17 @@ export const llmExtract = (
 ): ResultAsync<PipelineModel, LlmExtractError> =>
   ResultAsync.fromPromise(
     (async () => {
+      const isMiniExtractionEnabled = Bun.env.MINI_EXTRACTION === "1";
+      const tables = isMiniExtractionEnabled
+        ? fileGraph.tables.slice(0, 10)
+        : fileGraph.tables;
+      const chunks = isMiniExtractionEnabled
+        ? fileGraph.chunks.slice(0, 30)
+        : fileGraph.chunks;
+
       const runTableExtractionSequentially = () =>
         runSequentialExtraction(
-          fileGraph.tables,
+          tables,
           async (table): Promise<TableExtractionItemsWithCostAndGrounding> => {
             if (!shouldRunExtraction(table.text)) {
               return [];
@@ -149,7 +157,7 @@ export const llmExtract = (
 
       const [perChunkQuoteResults, perChunkTableResults] = await Promise.all([
         runSequentialExtraction(
-          fileGraph.chunks,
+          chunks,
           async (chunk): Promise<QuoteExtractionItemsWithCostAndGrounding> => {
             if (!shouldRunExtraction(chunk.text)) {
               return [];
