@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { cleanHtml, cleanHtmlFile } from "./index";
+import { cleanHtml, cleanHtmlFile } from "./clean";
 
 const tempRoot = resolve(
   "/var/folders/xp/2fyz9z3j7mgfzfkdtpcn95kr0000gn/T/opencode",

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import { calculateCost, resolveModelName } from "./cost";
 
-describe("agent helpers", () => {
+describe("agent cost", () => {
   it("resolves model name", () => {
     expect(
       resolveModelName(
