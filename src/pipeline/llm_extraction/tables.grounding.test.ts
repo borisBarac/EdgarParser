@@ -36,7 +36,6 @@ describe("table extraction grounding", () => {
 
     const result = await runTableExtractionAgent({
       tools: {
-        companyContextData: "",
         extractionData: "<table/>",
         adjesonData: "",
       },
@@ -61,7 +60,6 @@ describe("table extraction grounding", () => {
 
     const result = await runTableExtractionAgent({
       tools: {
-        companyContextData: "",
         extractionData: "<table/>",
         adjesonData: "",
       },

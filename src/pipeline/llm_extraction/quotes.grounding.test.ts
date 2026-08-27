@@ -39,7 +39,6 @@ describe("runQuoteExtractionAgent grounding", () => {
 
     const result = await runQuoteExtractionAgent({
       tools: {
-        companyContextData: "",
         extractionData: "chunk",
         adjesonData: "",
       },
@@ -95,7 +94,6 @@ describe("runQuoteExtractionAgent grounding", () => {
 
     const result = await runQuoteExtractionAgent({
       tools: {
-        companyContextData: "",
         extractionData: "chunk",
         adjesonData: "",
       },

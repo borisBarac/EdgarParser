@@ -23,12 +23,18 @@ describe("quote extraction agent", () => {
     expect(QuoteExtractionItemsSchema.safeParse([{}]).success).toBe(false);
   });
 
-  it("keeps the user prompt minimal", () => {
-    expect(quoteExtractionPrompt).toContain(
-      "Return only the array of quote items",
-    );
-    expect(quoteExtractionPrompt).toContain("do not summarize");
+  it("keeps the user prompt aligned to the tool priority", () => {
+    expect(quoteExtractionPrompt).toContain("getExtractionData first");
+    expect(quoteExtractionPrompt).toContain("GetAdjesonData only if");
     expect(quoteExtractionPrompt).not.toContain("cost");
+  });
+
+  it("keeps the system prompt on narrative prose and grounding rules", () => {
+    expect(quoteExtractionSystemPrompt).toContain("narrative prose");
+    expect(quoteExtractionSystemPrompt).toContain(
+      'Use type "guidance" for forward guidance',
+    );
+    expect(quoteExtractionSystemPrompt).toContain("If nothing qualifies");
   });
 
   it("supports post-processed cost enrichment", () => {

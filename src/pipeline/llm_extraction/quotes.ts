@@ -33,12 +33,8 @@ export type QuoteExtractionAgentInput = Readonly<{
 
 export const quoteExtractionSystemPrompt = `You extract data and management quotes from EDGAR narrative prose.
 
-Use the configured tools to inspect the source material before answering.
-
-Return only structured JSON matching the provided schema. No markdown, no commentary, no extra keys.
-
 Rules:
-- Single pass: extract all relevant items in one response.
+- Use the configured tools to inspect the source material before answering.
 - Focus on narrative prose in forward guidance, risk factors, and management commentary.
 - Do not paraphrase.
 - Keep statement source-faithful and non-paraphrased.
@@ -51,13 +47,9 @@ Rules:
 
 export const quoteExtractionPrompt = `Extract all qualifying narrative prose quotes from the filing using the tools.
 
-Return only the array of quote items. Each item must have:
-- type
-- statement
-- quote
-- grounding
+Use getExtractionData first. Use GetAdjesonData only if needed.
 
-Keep statement source-faithful and non-paraphrased. Prefer exact wording from the filing; do not summarize.`;
+Return the quote items.`;
 
 export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
   runStructuredAgent({

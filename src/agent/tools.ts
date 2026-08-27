@@ -5,6 +5,19 @@ import type { AgentToolContents } from "./types";
 
 const zeroArgSchema = z.object({}).strict();
 
+export const agentToolMetadata = {
+  extractionData: {
+    name: "getExtractionData",
+    description:
+      "Primary extraction data. Use this first. It is the main source for the filing content being extracted.",
+  },
+  adjesonData: {
+    name: "GetAdjesonData",
+    description:
+      "Fallback adjacent-context data. Use only when getExtractionData does not contain the needed information.",
+  },
+} as const;
+
 const createConfiguredTool = (
   name: string,
   description: string,
@@ -18,18 +31,13 @@ const createConfiguredTool = (
 
 export const createAgentTools = (toolContents: AgentToolContents) => [
   createConfiguredTool(
-    "GetCompanyContextData",
-    "Returns company context data configured when the agent is created.",
-    toolContents.companyContextData,
-  ),
-  createConfiguredTool(
-    "getExtractionData",
-    "Returns extraction data configured when the agent is created.",
+    agentToolMetadata.extractionData.name,
+    agentToolMetadata.extractionData.description,
     toolContents.extractionData,
   ),
   createConfiguredTool(
-    "GetAdjesonData",
-    "Returns Adjeson data configured when the agent is created.",
+    agentToolMetadata.adjesonData.name,
+    agentToolMetadata.adjesonData.description,
     toolContents.adjesonData,
   ),
 ];

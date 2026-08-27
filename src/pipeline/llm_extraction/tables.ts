@@ -29,12 +29,8 @@ export type TableExtractionAgentInput = Readonly<{
 
 export const tableExtractionSystemPrompt = `You extract financial tables from EDGAR filings.
 
-Use the configured tools to inspect the source material before answering.
-
-Return only structured JSON matching the provided schema. No markdown, no commentary, no extra keys.
-
 Rules:
-- Single pass: extract all relevant tables in one response.
+- Use the configured tools to inspect the source material before answering.
 - Focus on financial statement tables, schedules, rollforwards, and other tabular financial disclosures.
 - Preserve the table structure from the filing.
 - Do not paraphrase titles, headers, labels, or cell text.
@@ -46,15 +42,9 @@ Rules:
 
 export const tableExtractionPrompt = `Extract all qualifying financial tables from the filing using the tools.
 
-Return only the array of table items. Each item must have:
-- title
-- currency
-- scale
-- columns
-- rows
-- grounding
+Use getExtractionData first. Use GetAdjesonData only if needed.
 
-Preserve the table exactly as shown in the filing when possible. Do not summarize.`;
+Return the table items.`;
 
 export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
   runStructuredAgent({

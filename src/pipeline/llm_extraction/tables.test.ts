@@ -23,12 +23,22 @@ describe("table extraction agent", () => {
     expect(TableExtractionItemsSchema.safeParse([{}]).success).toBe(false);
   });
 
-  it("keeps the user prompt minimal", () => {
-    expect(tableExtractionPrompt).toContain(
-      "Return only the array of table items",
-    );
-    expect(tableExtractionPrompt).toContain("Do not summarize");
+  it("keeps the user prompt aligned to the tool priority", () => {
+    expect(tableExtractionPrompt).toContain("getExtractionData first");
+    expect(tableExtractionPrompt).toContain("GetAdjesonData only if");
     expect(tableExtractionPrompt).not.toContain("cost");
+  });
+
+  it("keeps the system prompt on financial tables and preservation rules", () => {
+    expect(tableExtractionSystemPrompt).toContain(
+      "financial tables from EDGAR filings",
+    );
+    expect(tableExtractionSystemPrompt).toContain(
+      "Preserve the table structure",
+    );
+    expect(tableExtractionSystemPrompt).toContain(
+      "Keep title, currency, and scale",
+    );
   });
 
   it("supports post-processed cost enrichment", () => {
