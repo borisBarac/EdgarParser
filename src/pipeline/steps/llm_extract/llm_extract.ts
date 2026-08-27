@@ -25,13 +25,27 @@ type ExtractionLocation = Readonly<{
   xpath?: string;
 }>;
 
-const createAgentInput = (chunkText: string) =>
+const formatToolText = (label: string, text: string): string =>
+  [label, "```text", text, "```"].join("\n");
+
+const findPreviousChunkText = (
+  chunks: FileGraph["chunks"],
+  orderInFile: number,
+): string =>
+  chunks.find((chunk) => chunk.orderInFile === orderInFile - 1)?.text ?? "";
+
+const createChunkAgentInput = (
+  chunk: FileGraph["chunks"][number],
+  previousChunkText: string,
+) =>
   ({
     // TODO: wire the real agent initialization and tools.
     tools: {
-      companyContextData: "",
-      extractionData: chunkText,
-      adjesonData: "",
+      extractionData: formatToolText(
+        "Current chunk extraction data",
+        chunk.text,
+      ),
+      adjesonData: formatToolText("Previous chunk context", previousChunkText),
     },
   }) as const;
 
@@ -54,6 +68,27 @@ const toTableSourceInput = (
   xpath: table.xpath,
   html: table.text,
 });
+
+export const createTableAgentInput = (
+  fileId: number,
+  table: FileGraph["tables"][number],
+) =>
+  ({
+    tools: {
+      extractionData: [
+        "Main table extraction data.",
+        "This is the primary HTML source to inspect.",
+        "```html",
+        table.text,
+        "```",
+      ].join("\n"),
+      adjesonData: formatToolText(
+        "Previous chunk context",
+        table.prevChunk?.text ?? "",
+      ),
+    },
+    source: toTableSourceInput(fileId, table),
+  }) as const;
 
 const logExtractionFailure = (
   kind: ExtractionKind,
@@ -90,10 +125,7 @@ export const llmExtract = (
         runSequentialExtraction(
           fileGraph.tables,
           async (table): Promise<TableExtractionItemsWithCost> => {
-            const agentInput = {
-              ...createAgentInput(table.text),
-              source: toTableSourceInput(fileGraph.file.id, table),
-            };
+            const agentInput = createTableAgentInput(fileGraph.file.id, table);
 
             return runTableExtractionAgent(agentInput).match(
               (value) => value,
@@ -111,8 +143,13 @@ export const llmExtract = (
         runSequentialExtraction(
           fileGraph.chunks,
           async (chunk): Promise<QuoteExtractionItemsWithCost> => {
+            const previousChunkText = findPreviousChunkText(
+              fileGraph.chunks,
+              chunk.orderInFile,
+            );
+
             const agentInput = {
-              ...createAgentInput(chunk.text),
+              ...createChunkAgentInput(chunk, previousChunkText),
               documentId: String(fileGraph.file.id),
               chunks: toGroundingChunks(fileGraph.chunks),
             };
