@@ -186,12 +186,11 @@ describe("llmExtract", () => {
         quoteAdjesonData.push(input.tools.adjesonData);
         quoteGroundingDocs.push(input.documentId);
         quoteGroundingChunkCounts.push(input.chunks?.length ?? 0);
+        const index = quoteCalls.length - 1;
 
-        return okAsync(
-          input.tools.extractionData.includes("chunk-0")
-            ? [makeQuote(0, "guidance")]
-            : [makeQuote(1, "risk")],
-        );
+        return okAsync([
+          makeQuote(index, index % 2 === 0 ? "guidance" : "risk"),
+        ]);
       },
     }));
 
@@ -229,7 +228,7 @@ describe("llmExtract", () => {
           orgFilePath: "/tmp/input.html",
           cleanFilePath: "/tmp/clean.html",
         },
-        chunks: [makeChunk(0), makeChunk(1)],
+        chunks: [makeChunk(0), makeChunk(1), makeChunk(2)],
         tables: [makeTable(0), makeTable(1, true)],
       }),
     );
@@ -237,12 +236,12 @@ describe("llmExtract", () => {
     expect(quoteCalls[0]).toContain("Current chunk extraction data");
     expect(quoteCalls[0]).toContain("chunk-0");
     expect(quoteCalls[1]).toContain("chunk-1");
-    expect(quoteAdjesonData).toHaveLength(2);
+    expect(quoteAdjesonData).toHaveLength(3);
     expect(quoteAdjesonData[0]).toContain("Previous chunk context");
     expect(quoteAdjesonData[1]).toContain("Previous chunk context");
     expect(quoteAdjesonData[1]).toContain("chunk-0");
-    expect(quoteGroundingDocs).toEqual(["1", "1"]);
-    expect(quoteGroundingChunkCounts).toEqual([2, 2]);
+    expect(quoteGroundingDocs).toEqual(["1", "1", "1"]);
+    expect(quoteGroundingChunkCounts).toEqual([1, 2, 2]);
     expect(tableCalls[0]).toContain("Main table extraction data.");
     expect(tableCalls[0]).toContain("```html");
     expect(tableCalls[0]).toContain("table-0");
@@ -252,10 +251,11 @@ describe("llmExtract", () => {
       "Previous chunk context\n```text\nchunk-0\n```",
     ]);
     expect(tableSourceXpaths).toEqual(["/table[0]", "/table[1]"]);
-    expect(result.quotes).toHaveLength(2);
+    expect(result.quotes).toHaveLength(3);
     expect(result.tables).toHaveLength(2);
     expect(result.quotes[0]?.statement).toBe("quote-0");
     expect(result.quotes[1]?.statement).toBe("quote-1");
+    expect(result.quotes[2]?.statement).toBe("quote-2");
     expect(result.tables[0]?.title ?? "").toContain("table-0");
     expect(result.tables[1]?.title ?? "").toContain("table-1");
   });

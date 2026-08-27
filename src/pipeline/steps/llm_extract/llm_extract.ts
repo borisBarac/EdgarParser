@@ -38,6 +38,12 @@ const findPreviousChunkText = (
 ): string =>
   chunks.find((chunk) => chunk.orderInFile === orderInFile - 1)?.text ?? "";
 
+const findPreviousChunk = (
+  chunks: FileGraph["chunks"],
+  orderInFile: number,
+): FileGraph["chunks"][number] | undefined =>
+  chunks.find((chunk) => chunk.orderInFile === orderInFile - 1);
+
 const createChunkAgentInput = (
   chunk: FileGraph["chunks"][number],
   previousChunkText: string,
@@ -54,15 +60,35 @@ const createChunkAgentInput = (
   }) as const;
 
 const toGroundingChunks = (
-  chunks: FileGraph["chunks"],
+  chunks: readonly {
+    readonly id: number;
+    readonly orderInFile: number;
+    readonly text: string;
+    readonly xpathStart: string | undefined;
+    readonly xpathEnd: string | undefined;
+  }[],
 ): readonly GroundingChunkInput[] =>
-  chunks.map((chunk) => ({
-    id: String(chunk.id),
-    orderInFile: chunk.orderInFile,
-    text: chunk.text,
-    xpathStart: chunk.xpathStart,
-    xpathEnd: chunk.xpathEnd,
-  }));
+  chunks
+    .filter((chunk) => htmlToVisibleText(chunk.text).length > 0)
+    .map((chunk) => ({
+      id: String(chunk.id),
+      orderInFile: chunk.orderInFile,
+      text: chunk.text,
+      xpathStart: chunk.xpathStart ?? null,
+      xpathEnd: chunk.xpathEnd ?? null,
+    }));
+
+const toQuoteGroundingChunks = (
+  chunk: FileGraph["chunks"][number],
+  previousChunk: FileGraph["chunks"][number] | undefined,
+): readonly GroundingChunkInput[] =>
+  toGroundingChunks([
+    chunk,
+    ...(previousChunk !== undefined &&
+    htmlToVisibleText(previousChunk.text).length > 0
+      ? [previousChunk]
+      : []),
+  ]);
 
 const toTableSourceInput = (
   fileId: number,
@@ -167,11 +193,15 @@ export const llmExtract = (
               fileGraph.chunks,
               chunk.orderInFile,
             );
+            const previousChunk = findPreviousChunk(
+              fileGraph.chunks,
+              chunk.orderInFile,
+            );
 
             const agentInput = {
               ...createChunkAgentInput(chunk, previousChunkText),
               documentId: String(fileGraph.file.id),
-              chunks: toGroundingChunks(fileGraph.chunks),
+              chunks: toQuoteGroundingChunks(chunk, previousChunk),
             };
 
             return runQuoteExtractionAgent(agentInput).match(
