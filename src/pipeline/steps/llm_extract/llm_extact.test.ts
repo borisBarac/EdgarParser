@@ -90,7 +90,7 @@ describe("llmExtract", () => {
       },
     }));
 
-    const { llmExtract } = await import("./llm_extact");
+    const { llmExtract } = await import("./llm_extract");
 
     const result = await llmExtract({
       file: {

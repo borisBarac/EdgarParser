@@ -1,1 +1,1 @@
-export * from "./llm_extact";
+export * from "./llm_extract";

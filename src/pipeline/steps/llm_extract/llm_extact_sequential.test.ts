@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { FileGraph } from "../../../db/repo";
-import { runSequentialExtraction } from "./llm_extact";
+import { runSequentialExtraction } from "./llm_extract";
 
 describe("runSequentialExtraction", () => {
   test("runs chunks in order and flattens results", async () => {
