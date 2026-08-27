@@ -42,7 +42,7 @@ describe("groundTableExtractionItem", () => {
     expect(grounding.score.jaccardSimilarity).toBeGreaterThan(0.3);
   });
 
-  test("rejects blank query text", () => {
+  test("grounds blank query text with zero score", () => {
     const result = groundTableExtractionItem(
       {
         title: "   ",
@@ -57,11 +57,41 @@ describe("groundTableExtractionItem", () => {
       },
     );
 
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr()).toEqual({ type: "empty_query" });
+    const grounding = result._unsafeUnwrap();
+
+    expect(grounding.documentId).toBe("doc-5");
+    expect(grounding.score.bm25).toBe(0);
+    expect(grounding.score.jaccardSimilarity).toBe(0);
   });
 
-  test("rejects empty table text", () => {
+  test("grounds corrupted extraction data with zero score", () => {
+    const result = groundTableExtractionItem(
+      {
+        title: null,
+        currency: null,
+        scale: null,
+        rows: [
+          {
+            label: "   ",
+            values: [{ raw: "   " }],
+          },
+        ],
+      },
+      {
+        documentId: "doc-5b",
+        xpath: "/html/body/table[5b]",
+        html: "<table><tbody><tr><td>Revenue</td><td>100</td></tr></tbody></table>",
+      },
+    );
+
+    const grounding = result._unsafeUnwrap();
+
+    expect(grounding.documentId).toBe("doc-5b");
+    expect(grounding.score.bm25).toBe(0);
+    expect(grounding.score.jaccardSimilarity).toBe(0);
+  });
+
+  test("grounds empty table text with zero score", () => {
     const result = groundTableExtractionItem(
       {
         title: "Revenue",
@@ -81,8 +111,11 @@ describe("groundTableExtractionItem", () => {
       },
     );
 
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr()).toEqual({ type: "empty_table" });
+    const grounding = result._unsafeUnwrap();
+
+    expect(grounding.documentId).toBe("doc-6");
+    expect(grounding.score.bm25).toBe(0);
+    expect(grounding.score.jaccardSimilarity).toBe(0);
   });
 
   test("ignores currency and scale in scoring", () => {

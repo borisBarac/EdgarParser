@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "neverthrow";
+import { ok, type Result } from "neverthrow";
 import {
   htmlToVisibleText,
   normalizeWhitespace,
@@ -30,14 +30,7 @@ export type GroundTableSourceInput = Readonly<{
   html: string;
 }>;
 
-export type GroundTableError = Readonly<
-  | {
-      type: "empty_query";
-    }
-  | {
-      type: "empty_table";
-    }
->;
+export type GroundTableError = never;
 
 const buildQueryText = (input: GroundTableExtractionInput): string => {
   const parts: string[] = [];
@@ -70,6 +63,13 @@ const buildCorpus = (input: GroundTableSourceInput): string =>
   htmlToVisibleText(input.html);
 
 const scoreCorpus = (query: string, corpus: string) => {
+  if (query.trim().length === 0 || corpus.trim().length === 0) {
+    return {
+      bm25: 0,
+      jaccardSimilarity: 0,
+    };
+  }
+
   const bm25 = searchDocuments([{ id: "table", text: corpus }], query, 1).match(
     (results) => results[0]?.score ?? 0,
     () => 0,
@@ -86,14 +86,7 @@ export const groundTableExtractionItem = (
   source: GroundTableSourceInput,
 ): Result<NonNullable<Grounding>, GroundTableError> => {
   const query = buildQueryText(extraction);
-  if (query.length === 0) {
-    return err({ type: "empty_query" } as const);
-  }
-
   const corpus = buildCorpus(source);
-  if (corpus.length === 0) {
-    return err({ type: "empty_table" } as const);
-  }
 
   return ok({
     documentId: source.documentId,

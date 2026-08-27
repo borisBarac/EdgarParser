@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "neverthrow";
+import { ok, type Result } from "neverthrow";
 import {
   htmlToVisibleText,
   normalizeWhitespace,
@@ -23,18 +23,7 @@ export type GroundQuoteInput = Readonly<{
   chunks: readonly GroundingChunkInput[];
 }>;
 
-export type GroundQuoteError = Readonly<
-  | {
-      type: "empty_query";
-    }
-  | {
-      type: "empty_chunks";
-    }
-  | {
-      type: "invalid_chunk";
-      id: string;
-    }
->;
+export type GroundQuoteError = never;
 
 const buildQueryText = (input: GroundQuoteInput): string => {
   const parts = [input.quote, input.statement]
@@ -57,23 +46,19 @@ const buildCorpus = (chunks: readonly GroundingChunkInput[]): string =>
 
 const validateChunks = (
   chunks: readonly GroundingChunkInput[],
-): Result<readonly GroundingChunkInput[], GroundQuoteError> => {
-  if (chunks.length === 0) {
-    return err({ type: "empty_chunks" } as const);
-  }
-
-  for (const chunk of chunks) {
-    if (chunk.id.trim().length === 0) {
-      return err({ type: "invalid_chunk", id: chunk.id } as const);
-    }
-  }
-
-  return ok(sortChunks(chunks));
-};
+): readonly GroundingChunkInput[] =>
+  sortChunks(chunks.filter((chunk) => chunk.id.trim().length > 0));
 
 type GroundingScore = NonNullable<Grounding>["score"];
 
 const scoreCorpus = (query: string, corpus: string): GroundingScore => {
+  if (query.trim().length === 0 || corpus.trim().length === 0) {
+    return {
+      bm25: 0,
+      jaccardSimilarity: 0,
+    };
+  }
+
   const bm25 = searchDocuments(
     [{ id: "combined", text: corpus }],
     query,
@@ -92,27 +77,19 @@ const scoreCorpus = (query: string, corpus: string): GroundingScore => {
 export const groundQuoteExtractionItem = (
   input: GroundQuoteInput,
 ): Result<NonNullable<Grounding>, GroundQuoteError> => {
+  const chunks = validateChunks(input.chunks);
   const queryText = buildQueryText(input);
-  if (queryText.length === 0) {
-    return err({ type: "empty_query" } as const);
-  }
+  const corpus = buildCorpus(chunks);
 
-  return validateChunks(input.chunks).andThen((chunks) => {
-    const corpus = buildCorpus(chunks);
-    if (corpus.length === 0) {
-      return err({ type: "empty_chunks" } as const);
-    }
+  const grounding: NonNullable<Grounding> = {
+    documentId: input.documentId,
+    chunks: chunks.map((chunk) => ({
+      id: chunk.id,
+      chunkXpathStart: chunk.xpathStart,
+      chunkXpathEnd: chunk.xpathEnd,
+    })),
+    score: scoreCorpus(queryText, corpus),
+  };
 
-    const grounding: NonNullable<Grounding> = {
-      documentId: input.documentId,
-      chunks: chunks.map((chunk) => ({
-        id: chunk.id,
-        chunkXpathStart: chunk.xpathStart,
-        chunkXpathEnd: chunk.xpathEnd,
-      })),
-      score: scoreCorpus(queryText, corpus),
-    };
-
-    return ok(grounding);
-  });
+  return ok(grounding);
 };

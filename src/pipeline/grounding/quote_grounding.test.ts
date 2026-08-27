@@ -99,7 +99,7 @@ describe("groundQuoteExtractionItem", () => {
     expect(grounding.score.bm25).toBeGreaterThan(1);
   });
 
-  test("rejects blank query text", () => {
+  test("grounds blank query text with zero score", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-3",
       statement: "   ",
@@ -115,11 +115,44 @@ describe("groundQuoteExtractionItem", () => {
       ],
     });
 
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr().type).toBe("empty_query");
+    const grounding = result._unsafeUnwrap();
+
+    expect(grounding.documentId).toBe("doc-3");
+    expect(grounding.score.bm25).toBe(0);
+    expect(grounding.score.jaccardSimilarity).toBe(0);
   });
 
-  test("rejects empty chunks", () => {
+  test("grounds corrupted extraction data with zero score", () => {
+    const result = groundQuoteExtractionItem({
+      documentId: "doc-3b",
+      statement: "   ",
+      quote: "",
+      chunks: [
+        {
+          id: "c1",
+          orderInFile: 1,
+          text: "Revenue increased because demand rose strongly.",
+          xpathStart: "/html/body/p[1]",
+          xpathEnd: "/html/body/p[1]",
+        },
+      ],
+    });
+
+    const grounding = result._unsafeUnwrap();
+
+    expect(grounding.documentId).toBe("doc-3b");
+    expect(grounding.chunks).toEqual([
+      {
+        id: "c1",
+        chunkXpathStart: "/html/body/p[1]",
+        chunkXpathEnd: "/html/body/p[1]",
+      },
+    ]);
+    expect(grounding.score.bm25).toBe(0);
+    expect(grounding.score.jaccardSimilarity).toBe(0);
+  });
+
+  test("grounds empty chunks with zero score", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-4",
       statement: "anything",
@@ -127,11 +160,15 @@ describe("groundQuoteExtractionItem", () => {
       chunks: [],
     });
 
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr().type).toBe("empty_chunks");
+    const grounding = result._unsafeUnwrap();
+
+    expect(grounding.documentId).toBe("doc-4");
+    expect(grounding.chunks).toEqual([]);
+    expect(grounding.score.bm25).toBe(0);
+    expect(grounding.score.jaccardSimilarity).toBe(0);
   });
 
-  test("rejects invalid chunk ids", () => {
+  test("skips invalid chunk ids", () => {
     const result = groundQuoteExtractionItem({
       documentId: "doc-5",
       statement: "anything",
@@ -147,11 +184,12 @@ describe("groundQuoteExtractionItem", () => {
       ],
     });
 
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr()).toEqual({
-      type: "invalid_chunk",
-      id: "   ",
-    });
+    const grounding = result._unsafeUnwrap();
+
+    expect(grounding.documentId).toBe("doc-5");
+    expect(grounding.chunks).toEqual([]);
+    expect(grounding.score.bm25).toBe(0);
+    expect(grounding.score.jaccardSimilarity).toBe(0);
   });
 
   test("grounds the messy quote fixture", () => {
