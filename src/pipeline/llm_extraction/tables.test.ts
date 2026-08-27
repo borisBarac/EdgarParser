@@ -18,9 +18,17 @@ describe("table extraction agent", () => {
     );
   });
 
-  it("uses an array structured output schema", () => {
-    expect(TableExtractionItemsSchema.safeParse([]).success).toBe(true);
-    expect(TableExtractionItemsSchema.safeParse([{}]).success).toBe(false);
+  it("uses a single table structured output schema", () => {
+    expect(
+      TableExtractionItemsSchema.safeParse({
+        title: null,
+        currency: null,
+        scale: null,
+        columns: [],
+        rows: [],
+      }).success,
+    ).toBe(true);
+    expect(TableExtractionItemsSchema.safeParse([]).success).toBe(false);
   });
 
   it("keeps the user prompt aligned to the tool priority", () => {

@@ -4,21 +4,18 @@ import { okAsync } from "neverthrow";
 mock.module("../../agent", () => ({
   runStructuredAgent: () =>
     okAsync({
-      output: [
-        {
-          title: "Income Statement",
-          currency: null,
-          scale: null,
-          columns: [],
-          rows: [
-            {
-              label: "Revenue",
-              values: [{ columnIndex: 0, raw: "100", numeric: 100 }],
-            },
-          ],
-          grounding: undefined,
-        },
-      ],
+      output: {
+        title: "Income Statement",
+        currency: null,
+        scale: null,
+        columns: [],
+        rows: [
+          {
+            label: "Revenue",
+            values: [{ columnIndex: 0, raw: "100", numeric: 100 }],
+          },
+        ],
+      },
       cost: {
         inputTokens: 1,
         outputTokens: 2,

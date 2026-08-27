@@ -11,13 +11,20 @@ import {
   QuoteExtractionItemWithCostAndGroundingSchema,
 } from "../model";
 
-export const QuoteExtractionItemsSchema = z.array(QuoteExtractionItemSchema);
+export const QuoteExtractionItemsSchema = z.object({
+  items: z.array(QuoteExtractionItemSchema),
+});
+export const QuoteExtractionItemsArraySchema = z.array(
+  QuoteExtractionItemSchema,
+);
 export const QuoteExtractionItemsSchemaWithCostAndGrounding = z.array(
   QuoteExtractionItemWithCostAndGroundingSchema,
 );
 
 export type QuoteExtractionItem = z.infer<typeof QuoteExtractionItemSchema>;
-export type QuoteExtractionItems = z.infer<typeof QuoteExtractionItemsSchema>;
+export type QuoteExtractionItems = z.infer<
+  typeof QuoteExtractionItemsArraySchema
+>;
 export type QuoteExtractionItemWithCostAndGrounding = z.infer<
   typeof QuoteExtractionItemWithCostAndGroundingSchema
 >;
@@ -43,13 +50,13 @@ Rules:
 - Each item must be a distinct quote or claim.
 - Deduplicate overlapping, repeated, or near-duplicate items.
 - Use type "guidance" for forward guidance, "risk" for risk factors, "management_commentary" for management discussion, and "other" only if the item is relevant but does not fit the other labels.
-- If nothing qualifies, return an empty array.`;
+- If nothing qualifies, return { items: [] }.`;
 
 export const quoteExtractionPrompt = `Extract all qualifying narrative prose quotes from the filing using the tools.
 
 Use getExtractionData first. Use GetAdjesonData only if needed.
 
-Return the quote items.`;
+Return { items: [...] }.`;
 
 export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
   runStructuredAgent({
@@ -59,7 +66,7 @@ export const runQuoteExtractionAgent = (input: QuoteExtractionAgentInput) =>
     model: "mini",
     tools: input.tools,
   }).andThen(({ output, cost }) => {
-    const groundedItems = output.map((item) => {
+    const groundedItems = output.items.map((item) => {
       const grounding =
         input.documentId === undefined || input.chunks === undefined
           ? undefined

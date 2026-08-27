@@ -6,14 +6,16 @@ describe("runQuoteExtractionAgent grounding", () => {
     mock.module("../../agent", () => ({
       runStructuredAgent: () =>
         okAsync({
-          output: [
-            {
-              type: "risk",
-              statement: "statement",
-              quote: "quote",
-              grounding: undefined,
-            },
-          ],
+          output: {
+            items: [
+              {
+                type: "risk",
+                statement: "statement",
+                quote: "quote",
+                grounding: undefined,
+              },
+            ],
+          },
           cost: {
             inputTokens: 1,
             outputTokens: 2,
@@ -67,14 +69,16 @@ describe("runQuoteExtractionAgent grounding", () => {
     mock.module("../../agent", () => ({
       runStructuredAgent: () =>
         okAsync({
-          output: [
-            {
-              type: "risk",
-              statement: "statement",
-              quote: "quote",
-              grounding: undefined,
-            },
-          ],
+          output: {
+            items: [
+              {
+                type: "risk",
+                statement: "statement",
+                quote: "quote",
+                grounding: undefined,
+              },
+            ],
+          },
           cost: {
             inputTokens: 1,
             outputTokens: 2,

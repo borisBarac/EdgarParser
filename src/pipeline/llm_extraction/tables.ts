@@ -12,7 +12,7 @@ import {
   TableExtractionWithCostAndGroundingSchema,
 } from "../model";
 
-export const TableExtractionItemsSchema = z.array(TableExtractionSchema);
+export const TableExtractionItemsSchema = TableExtractionSchema;
 export const TableExtractionItemsSchemaWithCostAndGrounding = z.array(
   TableExtractionWithCostAndGroundingSchema,
 );
@@ -40,8 +40,8 @@ Rules:
 - Keep title, currency, and scale faithful to the source when recoverable.
 - Set numeric only when the value is unambiguous after accounting for scale and formatting.
 - Keep raw as the exact cell text when recoverable.
-- Deduplicate repeated, duplicated, or overlapping tables.
-- If nothing qualifies, return an empty array.`;
+ - Deduplicate repeated, duplicated, or overlapping tables.
+ - If nothing qualifies, return an empty table.`;
 
 export const tableExtractionPrompt = `Extract all qualifying financial tables from the filing using the tools.
 
@@ -57,38 +57,36 @@ export const runTableExtractionAgent = (input: TableExtractionAgentInput) =>
     model: "mini",
     tools: input.tools,
   }).andThen(({ output, cost }) => {
-    const groundedItems = output.map((item) => {
-      const grounding =
-        input.source === undefined
-          ? undefined
-          : groundTableExtractionItem(
-              {
-                title: item.title,
-                currency: item.currency,
-                scale: item.scale,
-                rows: item.rows,
-              },
-              input.source,
-            ).match(
-              (value) => value,
-              (error) => {
-                console.log("table grounding failed", {
-                  title: item.title,
-                  error,
-                });
+    const grounding =
+      input.source === undefined
+        ? undefined
+        : groundTableExtractionItem(
+            {
+              title: output.title,
+              currency: output.currency,
+              scale: output.scale,
+              rows: output.rows,
+            },
+            input.source,
+          ).match(
+            (value) => value,
+            (error) => {
+              console.log("table grounding failed", {
+                title: output.title,
+                error,
+              });
 
-                return undefined;
-              },
-            );
+              return undefined;
+            },
+          );
 
-      return {
-        ...item,
-        grounding,
-        cost,
-      };
-    });
+    const groundedItem = {
+      ...output,
+      grounding,
+      cost,
+    };
 
     return okAsync(
-      TableExtractionItemsSchemaWithCostAndGrounding.parse(groundedItems),
+      TableExtractionItemsSchemaWithCostAndGrounding.parse([groundedItem]),
     );
   });

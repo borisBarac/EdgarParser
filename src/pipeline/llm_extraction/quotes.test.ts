@@ -18,9 +18,11 @@ describe("quote extraction agent", () => {
     );
   });
 
-  it("uses an array structured output schema", () => {
-    expect(QuoteExtractionItemsSchema.safeParse([]).success).toBe(true);
-    expect(QuoteExtractionItemsSchema.safeParse([{}]).success).toBe(false);
+  it("uses an object structured output schema", () => {
+    expect(QuoteExtractionItemsSchema.safeParse({ items: [] }).success).toBe(
+      true,
+    );
+    expect(QuoteExtractionItemsSchema.safeParse([]).success).toBe(false);
   });
 
   it("keeps the user prompt aligned to the tool priority", () => {
