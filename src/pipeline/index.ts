@@ -1,8 +1,10 @@
 import { basename, extname, join } from "node:path";
+import { performance } from "node:perf_hooks";
 import type { PrismaClient } from "@prisma/client";
 import type { ResultAsync } from "neverthrow";
 import type { FileGraph } from "../db/repo";
 import { createRepo } from "../db/repo";
+import { logValue } from "../utility/debug";
 import type { PipelineModel } from "./model";
 import { type ChunkStepError, chunk } from "./steps/chunk";
 import { clean } from "./steps/clean";
@@ -71,6 +73,42 @@ const saveError = (
   cause,
 });
 
+const elapsedMs = (startedAt: number): number =>
+  Number((performance.now() - startedAt).toFixed(1));
+
+const logStep = (
+  event: string,
+  details: Readonly<Record<string, unknown>>,
+): void => {
+  logValue(event, details);
+};
+
+const withStepLogging = <T, E>(
+  step: string,
+  details: Readonly<Record<string, unknown>>,
+  run: () => ResultAsync<T, E>,
+): ResultAsync<T, E> => {
+  const startedAt = performance.now();
+
+  logStep(`${step}.start`, details);
+
+  return run()
+    .map((value) => {
+      logStep(`${step}.ok`, { ...details, durationMs: elapsedMs(startedAt) });
+
+      return value;
+    })
+    .mapErr((cause) => {
+      logStep(`${step}.error`, {
+        ...details,
+        durationMs: elapsedMs(startedAt),
+        cause,
+      });
+
+      return cause;
+    });
+};
+
 export const runPipeline = (
   workingFolder: string,
   inputFileName: string,
@@ -79,20 +117,71 @@ export const runPipeline = (
   const inputPath = join(workingFolder, inputFileName);
   const outputPath = outputPathForInput(workingFolder, inputFileName);
   const repo = createRepo(prisma);
+  const startedAt = performance.now();
 
-  return clean(inputPath)
-    .mapErr((cause) => cleanError(inputPath, cause))
+  logStep("pipeline.run.start", { inputPath, outputPath });
+
+  return withStepLogging("pipeline.clean", { inputPath }, () =>
+    clean(inputPath).mapErr((cause) => cleanError(inputPath, cause)),
+  )
     .andThen((cleanedFile) =>
-      chunk(repo, cleanedFile).mapErr((cause) => chunkError(inputPath, cause)),
+      withStepLogging(
+        "pipeline.chunk",
+        { inputPath, cleanedFilePath: cleanedFile.cleanedFilePath },
+        () =>
+          chunk(repo, cleanedFile).mapErr((cause) =>
+            chunkError(inputPath, cause),
+          ),
+      ),
     )
     .andThen((fileGraph: FileGraph) =>
-      llmExtract(fileGraph).mapErr((cause) =>
-        llmExtractError(inputPath, cause),
+      withStepLogging(
+        "pipeline.llm_extract",
+        {
+          inputPath,
+          fileId: fileGraph.file.id,
+          chunkCount: fileGraph.chunks.length,
+          tableCount: fileGraph.tables.length,
+        },
+        () =>
+          llmExtract(fileGraph).mapErr((cause) =>
+            llmExtractError(inputPath, cause),
+          ),
       ),
     )
     .andThen((model: PipelineModel) =>
-      save(model, outputPath).mapErr((cause) => saveError(outputPath, cause)),
-    );
+      withStepLogging(
+        "pipeline.save",
+        {
+          outputPath,
+          quoteCount: model.quotes.length,
+          tableCount: model.tables.length,
+        },
+        () =>
+          save(model, outputPath).mapErr((cause) =>
+            saveError(outputPath, cause),
+          ),
+      ),
+    )
+    .map((value) => {
+      logStep("pipeline.run.ok", {
+        inputPath,
+        outputPath,
+        durationMs: elapsedMs(startedAt),
+      });
+
+      return value;
+    })
+    .mapErr((cause) => {
+      logStep("pipeline.run.error", {
+        inputPath,
+        outputPath,
+        durationMs: elapsedMs(startedAt),
+        cause,
+      });
+
+      return cause;
+    });
 };
 
 export type { FileGraph } from "../db/repo";
