@@ -1,11 +1,11 @@
 import { okAsync, type Result, type ResultAsync } from "neverthrow";
-import type { ZodTypeAny } from "zod";
+import type { ZodType } from "zod";
 import { logValue } from "../../utility/debug";
 
 type GroundedItemInput<TItem, TGrounding, TOutput> = Readonly<{
   label: string;
   items: readonly TItem[];
-  schema: ZodTypeAny;
+  schema: ZodType<TOutput[]>;
   describeItem: (item: TItem) => Readonly<Record<string, unknown>>;
   groundItem: (item: TItem) => Result<TGrounding | undefined, unknown>;
   buildItem: (item: TItem, grounding: TGrounding | undefined) => TOutput;
@@ -19,7 +19,7 @@ const logGroundedItem = <T>(label: string, value: T): T =>
 
 export const groundItems = <TItem, TGrounding, TOutput>(
   input: GroundedItemInput<TItem, TGrounding, TOutput>,
-): ResultAsync<readonly TOutput[], never> => {
+): ResultAsync<TOutput[], never> => {
   const groundedItems = input.items.map((item) => {
     const grounding = input.groundItem(item).match(
       (value) => value,

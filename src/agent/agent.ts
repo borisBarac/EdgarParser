@@ -106,9 +106,13 @@ const readRequiredEnv = (): Result<AgentEnv, StructuredAgentError> => {
     }
   }
 
+  // biome-ignore lint/style/noNonNullAssertion: required env validated above
   const pipelineKey = Bun.env.PIPELINE_KEY!;
+  // biome-ignore lint/style/noNonNullAssertion: required env validated above
   const llmUrl = Bun.env.LLM_URL!;
+  // biome-ignore lint/style/noNonNullAssertion: required env validated above
   const miniModel = Bun.env.MODEL_MINI!;
+  // biome-ignore lint/style/noNonNullAssertion: required env validated above
   const mainModel = Bun.env.MODEL_MAIN!;
 
   const parseNumber = (

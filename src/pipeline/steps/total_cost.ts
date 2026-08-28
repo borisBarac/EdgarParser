@@ -1,18 +1,15 @@
-import type { PipelineExtractionModel, PipelineModel } from "../model";
+import type { Cost, PipelineExtractionModel, PipelineModel } from "../model";
 
-const zeroCost = {
+const zeroCost: Cost = {
   inputTokens: 0,
   outputTokens: 0,
   totalTokens: 0,
   inputUsd: 0,
   outputUsd: 0,
   totalUsd: 0,
-} as const;
+};
 
-const addCosts = (
-  left: Readonly<typeof zeroCost>,
-  right: Readonly<typeof zeroCost>,
-) => ({
+const addCosts = (left: Cost, right: Cost): Cost => ({
   inputTokens: left.inputTokens + right.inputTokens,
   outputTokens: left.outputTokens + right.outputTokens,
   totalTokens: left.totalTokens + right.totalTokens,

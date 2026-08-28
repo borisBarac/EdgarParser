@@ -14,7 +14,9 @@ describe("agent tools", () => {
       "GetAdjesonData",
     ]);
 
+    // biome-ignore lint/style/noNonNullAssertion: array is asserted by test input
     const extractionTool = tools[0]!;
+    // biome-ignore lint/style/noNonNullAssertion: array is asserted by test input
     const adjesonTool = tools[1]!;
 
     expect(extractionTool.description).toContain("Use this first");
