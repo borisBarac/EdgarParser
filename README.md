@@ -25,7 +25,7 @@ Pipeline is basically:
 Simple agent that uses Structured Output. It has 2 tools we configure when we make it, one provides the main text we are doing extraction on, and the next is for adjacent data. They are configured when agent is made, so agent uses them when needed and if needed (2nd one), so we are not polluting the context, and it is cheaper.
 
 ### Improvement ideas
-- Retry middleware for 429 in langchain agents
+- make pipeline startable from any step, and save all the extracted info to DB
 - depending on LLM limits we can increase the parallel processing, how is just 2 agents (mostly because i wanted to avoid 429)
 - during Quote data Extraction, we can pre-made calibrated word dictionaries we can use with BM25 to see if chunk is worth giving to LLM. This would need calibration.
 - Observability
@@ -36,6 +36,7 @@ Simple agent that uses Structured Output. It has 2 tools we configure when we ma
 Data is in the `./edgar_test_files` folder
 
 ## Technical Setup and Commands
+Project uses `bun` and TS.
 
 ### Prerequisites
 Needed because of (if u on mac and have xcode-cli, you are good) [similarity-node lib](https://github.com/piotrmaciejbednarski/text-similarity-node) <br>

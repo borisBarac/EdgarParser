@@ -1,5 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { createAgent, providerStrategy } from "langchain";
+import { createAgent, modelRetryMiddleware, providerStrategy } from "langchain";
 import {
   err,
   errAsync,
@@ -21,6 +21,24 @@ import type {
 
 type AgentTool = ReturnType<typeof createAgentTools>[number];
 
+type AgentRetryConfig = Readonly<{
+  maxRetries: number;
+  initialDelayMs: number;
+  backoffFactor: number;
+  maxDelayMs: number;
+  jitter: boolean;
+  onFailure: "error";
+}>;
+
+const retryDefaults: AgentRetryConfig = {
+  maxRetries: 5,
+  initialDelayMs: 2_000,
+  backoffFactor: 2,
+  maxDelayMs: 30_000,
+  jitter: true,
+  onFailure: "error",
+};
+
 const requiredEnvKeys = [
   "PIPELINE_KEY",
   "LLM_URL",
@@ -33,6 +51,13 @@ const requiredEnvKeys = [
 ] as const;
 
 type RequiredEnvKey = (typeof requiredEnvKeys)[number];
+type RetryEnvKey =
+  | "AGENT_RETRY_MAX_RETRIES"
+  | "AGENT_RETRY_INITIAL_DELAY_MS"
+  | "AGENT_RETRY_BACKOFF_FACTOR"
+  | "AGENT_RETRY_MAX_DELAY_MS"
+  | "AGENT_RETRY_JITTER"
+  | "AGENT_RETRY_ON_FAILURE";
 
 const missingEnvError = (key: string): StructuredAgentError => ({
   type: "missing_env",
@@ -119,6 +144,84 @@ const readRequiredEnv = (): Result<AgentEnv, StructuredAgentError> => {
   });
 };
 
+const readRetryEnv = (): Result<AgentRetryConfig, StructuredAgentError> => {
+  const readNumber = (
+    key: RetryEnvKey,
+    fallback: number,
+  ): Result<number, StructuredAgentError> => {
+    const raw = Bun.env[key];
+    if (raw === undefined || raw.trim().length === 0) return ok(fallback);
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed)
+      ? ok(parsed)
+      : err(invalidEnvError(key, raw));
+  };
+
+  const readBoolean = (
+    key: RetryEnvKey,
+    fallback: boolean,
+  ): Result<boolean, StructuredAgentError> => {
+    const raw = Bun.env[key];
+    if (raw === undefined || raw.trim().length === 0) return ok(fallback);
+
+    if (raw === "true" || raw === "1") return ok(true);
+    if (raw === "false" || raw === "0") return ok(false);
+    return err(invalidEnvError(key, raw));
+  };
+
+  const readFailureMode = (
+    key: RetryEnvKey,
+    fallback: "error",
+  ): Result<"error", StructuredAgentError> => {
+    const raw = Bun.env[key];
+    if (raw === undefined || raw.trim().length === 0) return ok(fallback);
+    return raw === "error" ? ok("error") : err(invalidEnvError(key, raw));
+  };
+
+  const maxRetries = readNumber(
+    "AGENT_RETRY_MAX_RETRIES",
+    retryDefaults.maxRetries,
+  );
+  if (maxRetries.isErr()) return err(maxRetries.error);
+
+  const initialDelayMs = readNumber(
+    "AGENT_RETRY_INITIAL_DELAY_MS",
+    retryDefaults.initialDelayMs,
+  );
+  if (initialDelayMs.isErr()) return err(initialDelayMs.error);
+
+  const backoffFactor = readNumber(
+    "AGENT_RETRY_BACKOFF_FACTOR",
+    retryDefaults.backoffFactor,
+  );
+  if (backoffFactor.isErr()) return err(backoffFactor.error);
+
+  const maxDelayMs = readNumber(
+    "AGENT_RETRY_MAX_DELAY_MS",
+    retryDefaults.maxDelayMs,
+  );
+  if (maxDelayMs.isErr()) return err(maxDelayMs.error);
+
+  const jitter = readBoolean("AGENT_RETRY_JITTER", retryDefaults.jitter);
+  if (jitter.isErr()) return err(jitter.error);
+
+  const onFailure = readFailureMode(
+    "AGENT_RETRY_ON_FAILURE",
+    retryDefaults.onFailure,
+  );
+  if (onFailure.isErr()) return err(onFailure.error);
+
+  return ok({
+    maxRetries: maxRetries.value,
+    initialDelayMs: initialDelayMs.value,
+    backoffFactor: backoffFactor.value,
+    maxDelayMs: maxDelayMs.value,
+    jitter: jitter.value,
+    onFailure: onFailure.value,
+  });
+};
+
 const readCostTokens = (
   cost: unknown,
 ): Result<
@@ -163,6 +266,7 @@ const readStructuredResponse = <TSchema extends ZodTypeAny>(
 
 const buildAgent = (
   env: AgentEnv,
+  retry: AgentRetryConfig,
   model: "mini" | "main",
   schema: ZodTypeAny,
   systemPrompt: string,
@@ -179,7 +283,12 @@ const buildAgent = (
     tools,
     responseFormat: providerStrategy(schema),
     systemPrompt,
-    middleware: [createCostMiddleware()],
+    middleware: [
+      createCostMiddleware(),
+      modelRetryMiddleware({
+        ...retry,
+      }),
+    ],
   });
 
 export const runStructuredAgent = <TSchema extends ZodTypeAny>(
@@ -193,10 +302,17 @@ export const runStructuredAgent = <TSchema extends ZodTypeAny>(
     return errAsync(envResult.error);
   }
 
+  const retryResult = readRetryEnv();
+  if (retryResult.isErr()) {
+    return errAsync(retryResult.error);
+  }
+
   const env = envResult.value;
+  const retry = retryResult.value;
   const tools = input.tools === undefined ? [] : createAgentTools(input.tools);
   const agent = buildAgent(
     env,
+    retry,
     input.model ?? "mini",
     input.schema,
     input.systemPrompt,
